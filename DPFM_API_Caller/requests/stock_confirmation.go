@@ -1,6 +1,8 @@
 package requests
 
 type StockConfirmation struct {
+	PlannedOrder                    int     `json:"PlannedOrder"`
+	PlannedOrderItem                int     `json:"PlannedOrderItem"`
 	BusinessPartner                 int     `json:"BusinessPartner"`
 	Product                         string  `json:"Product"`
 	Plant                           string  `json:"Plant"`

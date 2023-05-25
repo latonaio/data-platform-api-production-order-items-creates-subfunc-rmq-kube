@@ -40,15 +40,15 @@ func (psdc *SDC) ConvertToProcessType() *ProcessType {
 }
 
 // Header
-func (psdc *SDC) ConvertToPlannedOrderHederKey() *PlannedOrderHederKey {
-	pm := &requests.PlannedOrderHederKey{
+func (psdc *SDC) ConvertToPlannedOrderHeaderKey() *PlannedOrderHeaderKey {
+	pm := &requests.PlannedOrderHeaderKey{
 		PlannedOrderType:       "PRD",
 		PlannedOrderIsReleased: true,
 		IsMarkedForDeletion:    false,
 	}
 
 	data := pm
-	res := PlannedOrderHederKey{
+	res := PlannedOrderHeaderKey{
 		MRPArea:                             data.MRPArea,
 		MRPAreaTo:                           data.MRPAreaTo,
 		MRPAreaFrom:                         data.MRPAreaFrom,
@@ -65,14 +65,14 @@ func (psdc *SDC) ConvertToPlannedOrderHederKey() *PlannedOrderHederKey {
 	return &res
 }
 
-func (psdc *SDC) ConvertToPlannedOrderHeder(rows *sql.Rows) ([]*PlannedOrderHeder, error) {
+func (psdc *SDC) ConvertToPlannedOrderHeader(rows *sql.Rows) ([]*PlannedOrderHeader, error) {
 	defer rows.Close()
-	res := make([]*PlannedOrderHeder, 0)
+	res := make([]*PlannedOrderHeader, 0)
 
 	i := 0
 	for rows.Next() {
 		i++
-		pm := &requests.PlannedOrderHeder{}
+		pm := &requests.PlannedOrderHeader{}
 
 		err := rows.Scan(
 			&pm.PlannedOrder,
@@ -87,7 +87,6 @@ func (psdc *SDC) ConvertToPlannedOrderHeder(rows *sql.Rows) ([]*PlannedOrderHede
 			&pm.OwnerProductionPlantBusinessPartner,
 			&pm.OwnerProductionPlant,
 			&pm.OwnerProductionPlantStorageLocation,
-			// &pm.BaseUnit,
 			&pm.MRPArea,
 			&pm.MRPController,
 			&pm.PlannedOrderQuantityInBaseUnit,
@@ -124,7 +123,7 @@ func (psdc *SDC) ConvertToPlannedOrderHeder(rows *sql.Rows) ([]*PlannedOrderHede
 			return nil, err
 		}
 		data := pm
-		res = append(res, &PlannedOrderHeder{
+		res = append(res, &PlannedOrderHeader{
 			PlannedOrder:                             data.PlannedOrder,
 			PlannedOrderType:                         data.PlannedOrderType,
 			Product:                                  data.Product,
@@ -137,7 +136,6 @@ func (psdc *SDC) ConvertToPlannedOrderHeder(rows *sql.Rows) ([]*PlannedOrderHede
 			OwnerProductionPlantBusinessPartner:      data.OwnerProductionPlantBusinessPartner,
 			OwnerProductionPlant:                     data.OwnerProductionPlant,
 			OwnerProductionPlantStorageLocation:      data.OwnerProductionPlantStorageLocation,
-			// BaseUnit:                                 data.BaseUnit,
 			MRPArea:                                  data.MRPArea,
 			MRPController:                            data.MRPController,
 			PlannedOrderQuantityInBaseUnit:           data.PlannedOrderQuantityInBaseUnit,
@@ -347,15 +345,10 @@ func (psdc *SDC) ConvertToPlannedOrderComponent(rows *sql.Rows) ([]*PlannedOrder
 		err := rows.Scan(
 			&pm.PlannedOrder,
 			&pm.PlannedOrderItem,
-			&pm.PlannedOrderSequence,
-			&pm.PlannedOrderOperation,
-			&pm.OrderInternalBillOfOperations,
 			&pm.BillOfMaterial,
 			&pm.BOMItem,
-			&pm.BOMItemDescription,
-			&pm.BillOfMaterialCategory,
-			&pm.BillOfMaterialItemNumber,
-			&pm.BillOfMaterialInternalID,
+			&pm.Operations,
+			&pm.OperationsItem,
 			&pm.Reservation,
 			&pm.ReservationItem,
 			&pm.ComponentProduct,
@@ -366,6 +359,7 @@ func (psdc *SDC) ConvertToPlannedOrderComponent(rows *sql.Rows) ([]*PlannedOrder
 			&pm.ComponentProductRequirementDate,
 			&pm.ComponentProductRequirementTime,
 			&pm.ComponentProductRequiredQuantity,
+			&pm.ComponentProductBusinessPartner,
 			&pm.BaseUnit,
 			&pm.MRPArea,
 			&pm.MRPController,
@@ -388,15 +382,10 @@ func (psdc *SDC) ConvertToPlannedOrderComponent(rows *sql.Rows) ([]*PlannedOrder
 		res = append(res, &PlannedOrderComponent{
 			PlannedOrder:                     data.PlannedOrder,
 			PlannedOrderItem:                 data.PlannedOrderItem,
-			PlannedOrderSequence:             data.PlannedOrderSequence,
-			PlannedOrderOperation:            data.PlannedOrderOperation,
-			OrderInternalBillOfOperations:    data.OrderInternalBillOfOperations,
 			BillOfMaterial:                   data.BillOfMaterial,
 			BOMItem:                          data.BOMItem,
-			BOMItemDescription:               data.BOMItemDescription,
-			BillOfMaterialCategory:           data.BillOfMaterialCategory,
-			BillOfMaterialItemNumber:         data.BillOfMaterialItemNumber,
-			BillOfMaterialInternalID:         data.BillOfMaterialInternalID,
+			Operations:                       data.Operations,
+			OperationsItem:                   data.OperationsItem,
 			Reservation:                      data.Reservation,
 			ReservationItem:                  data.ReservationItem,
 			ComponentProduct:                 data.ComponentProduct,
@@ -407,6 +396,7 @@ func (psdc *SDC) ConvertToPlannedOrderComponent(rows *sql.Rows) ([]*PlannedOrder
 			ComponentProductRequirementDate:  data.ComponentProductRequirementDate,
 			ComponentProductRequirementTime:  data.ComponentProductRequirementTime,
 			ComponentProductRequiredQuantity: data.ComponentProductRequiredQuantity,
+			ComponentProductBusinessPartner:  data.ComponentProductBusinessPartner,
 			BaseUnit:                         data.BaseUnit,
 			MRPArea:                          data.MRPArea,
 			MRPController:                    data.MRPController,
@@ -431,22 +421,38 @@ func (psdc *SDC) ConvertToPlannedOrderComponent(rows *sql.Rows) ([]*PlannedOrder
 }
 
 // Item
-func (psdc *SDC) ConvertToProductionOrderItem(sdc *api_input_reader.SDC) []*ProductionOrderItem {
+func (psdc *SDC) ConvertToProductionOrderItem() []*ProductionOrderItem {
 	res := make([]*ProductionOrderItem, 0)
 
-	for i := range sdc.Header.Item {
+	for i, v := range psdc.PlannedOrderItem {
 		pm := &requests.ProductionOrderItem{}
 
+		pm.PlannedOrder = v.PlannedOrder
+		pm.PlannedOrderItem = v.PlannedOrderItem
 		pm.ProductionOrderItemNumber = i + 1
-		sdc.Header.Item[i].ProductionOrderItem = i + 1
 
 		data := pm
 		res = append(res, &ProductionOrderItem{
+			PlannedOrder:              data.PlannedOrder,
+			PlannedOrderItem:          data.PlannedOrderItem,
 			ProductionOrderItemNumber: data.ProductionOrderItemNumber,
 		})
 	}
 
 	return res
+}
+
+func (psdc *SDC) ConvertToExecuteProductAvailabilityCheck(sdc *api_input_reader.SDC) *ExecuteProductAvailabilityCheck {
+	pm := &requests.ExecuteProductAvailabilityCheck{}
+
+	pm.ExecuteProductAvailabilityCheck = *sdc.InputParameters.ExecuteProductAvailabilityCheck
+
+	data := pm
+	res := ExecuteProductAvailabilityCheck{
+		ExecuteProductAvailabilityCheck: data.ExecuteProductAvailabilityCheck,
+	}
+
+	return &res
 }
 
 func (psdc *SDC) ConvertToProductMasterBPPlantKey() *ProductMasterBPPlantKey {
@@ -502,10 +508,12 @@ func (psdc *SDC) ConvertToStockConfirmationKey() *StockConfirmationKey {
 
 	data := pm
 	res := &StockConfirmationKey{
-		Product:                                      data.Product,
-		StockConfirmationBusinessPartner:             data.StockConfirmationBusinessPartner,
-		StockConfirmationPlant:                       data.StockConfirmationPlant,
-		StockConfirmationPlantBatch:                  data.StockConfirmationPlantBatch,
+		PlannedOrder:                     data.PlannedOrder,
+		PlannedOrderItem:                 data.PlannedOrderItem,
+		Product:                          data.Product,
+		StockConfirmationBusinessPartner: data.StockConfirmationBusinessPartner,
+		StockConfirmationPlant:           data.StockConfirmationPlant,
+		StockConfirmationPlantBatch:      data.StockConfirmationPlantBatch,
 		StockConfirmationPlantBatchValidityStartDate: data.StockConfirmationPlantBatchValidityStartDate,
 		StockConfirmationPlantBatchValidityEndDate:   data.StockConfirmationPlantBatchValidityEndDate,
 		PlannedOrderIssuingQuantity:                  data.PlannedOrderIssuingQuantity,
@@ -517,7 +525,7 @@ func (psdc *SDC) ConvertToStockConfirmationKey() *StockConfirmationKey {
 	return res
 }
 
-func (psdc *SDC) ConvertToStockConfirmation(resData map[string]interface{}, stockConfirmationIsOrdinary, stockConfirmationIsLotUnit bool) (*StockConfirmation, error) {
+func (psdc *SDC) ConvertToStockConfirmation(resData map[string]interface{}, plannedOrder, plannedOrderItem int, stockConfirmationIsOrdinary, stockConfirmationIsLotUnit bool) (*StockConfirmation, error) {
 	pm := &requests.StockConfirmation{}
 
 	result := resData["result"].(bool)
@@ -534,11 +542,15 @@ func (psdc *SDC) ConvertToStockConfirmation(resData map[string]interface{}, stoc
 		return nil, xerrors.Errorf("input data marshal error :%#v", err.Error())
 	}
 
+	pm.PlannedOrder = plannedOrder
+	pm.PlannedOrderItem = plannedOrderItem
 	pm.StockConfirmationIsOrdinary = stockConfirmationIsOrdinary
 	pm.StockConfirmationIsLotUnit = stockConfirmationIsLotUnit
 
 	data := pm
 	res := &StockConfirmation{
+		PlannedOrder:                    data.PlannedOrder,
+		PlannedOrderItem:                data.PlannedOrderItem,
 		BusinessPartner:                 data.BusinessPartner,
 		Product:                         data.Product,
 		Plant:                           data.Plant,
@@ -622,6 +634,46 @@ func (psdc *SDC) ConvertToBatchMasterRecordBatch(rows *sql.Rows) ([]*BatchMaster
 	return res, nil
 }
 
+func (psdc *SDC) ConvertToItemIsPartiallyConfirmed(stockConfirmation *StockConfirmation, itemIsPartiallyConfirmed bool) *ItemIsPartiallyConfirmed {
+	pm := &requests.ItemIsPartiallyConfirmed{}
+
+	pm.PlannedOrder = stockConfirmation.PlannedOrder
+	pm.PlannedOrderItem = stockConfirmation.PlannedOrderItem
+	pm.StockIsFullyChecked = stockConfirmation.StockIsFullyChecked
+	pm.OpenConfirmedQuantityInBaseUnit = stockConfirmation.OpenConfirmedQuantityInBaseUnit
+	pm.ItemIsPartiallyConfirmed = itemIsPartiallyConfirmed
+
+	data := pm
+	res := ItemIsPartiallyConfirmed{
+		PlannedOrder:                    data.PlannedOrder,
+		PlannedOrderItem:                data.PlannedOrderItem,
+		StockIsFullyChecked:             data.StockIsFullyChecked,
+		OpenConfirmedQuantityInBaseUnit: data.OpenConfirmedQuantityInBaseUnit,
+		ItemIsPartiallyConfirmed:        data.ItemIsPartiallyConfirmed,
+	}
+
+	return &res
+}
+
+func (psdc *SDC) ConvertToItemIsConfirmed(stockConfirmation *StockConfirmation, itemIsConfirmed bool) *ItemIsConfirmed {
+	pm := &requests.ItemIsConfirmed{}
+
+	pm.PlannedOrder = stockConfirmation.PlannedOrder
+	pm.PlannedOrderItem = stockConfirmation.PlannedOrderItem
+	pm.StockIsFullyChecked = stockConfirmation.StockIsFullyChecked
+	pm.ItemIsConfirmed = itemIsConfirmed
+
+	data := pm
+	res := ItemIsConfirmed{
+		PlannedOrder:        data.PlannedOrder,
+		PlannedOrderItem:    data.PlannedOrderItem,
+		StockIsFullyChecked: data.StockIsFullyChecked,
+		ItemIsConfirmed:     data.ItemIsConfirmed,
+	}
+
+	return &res
+}
+
 func (psdc *SDC) ConvertToProductAvailabilityIsNotChecked(productAvailabilityIsNotChecked *bool) *ProductAvailabilityIsNotChecked {
 	pm := &requests.ProductAvailabilityIsNotChecked{}
 
@@ -635,7 +687,7 @@ func (psdc *SDC) ConvertToProductAvailabilityIsNotChecked(productAvailabilityIsN
 	return &res
 }
 
-func (psdc *SDC) ConvertToInternalBillOfOperations(plannedOrder, plannedOrderItem int, internalBillOfOperations *string) *InternalBillOfOperations {
+func (psdc *SDC) ConvertToInternalBillOfOperations(plannedOrder, plannedOrderItem int, internalBillOfOperations *int) *InternalBillOfOperations {
 	pm := &requests.InternalBillOfOperations{}
 
 	pm.PlannedOrder = plannedOrder
@@ -652,30 +704,24 @@ func (psdc *SDC) ConvertToInternalBillOfOperations(plannedOrder, plannedOrderIte
 	return &res
 }
 
-func (psdc *SDC) ConvertToTotalQuantity(stockConfirmation *StockConfirmation) *TotalQuantity {
+func (psdc *SDC) ConvertToTotalQuantity(plannedOrder, plannedOrderItem int, totalQuantity *float32) *TotalQuantity {
 	pm := &requests.TotalQuantity{}
 
-	pm.BusinessPartner = stockConfirmation.BusinessPartner
-	pm.Product = stockConfirmation.Product
-	pm.Plant = stockConfirmation.Plant
-	pm.Batch = stockConfirmation.Batch
-	pm.ProductStockAvailabilityDate = stockConfirmation.ProductStockAvailabilityDate
-	pm.TotalQuantity = stockConfirmation.OpenConfirmedQuantityInBaseUnit
+	pm.PlannedOrder = plannedOrder
+	pm.PlannedOrderItem = plannedOrderItem
+	pm.TotalQuantity = totalQuantity
 
 	data := pm
 	res := TotalQuantity{
-		BusinessPartner:              data.BusinessPartner,
-		Product:                      data.Product,
-		Plant:                        data.Plant,
-		Batch:                        data.Batch,
-		ProductStockAvailabilityDate: data.ProductStockAvailabilityDate,
-		TotalQuantity:                data.TotalQuantity,
+		PlannedOrder:     data.PlannedOrder,
+		PlannedOrderItem: data.PlannedOrderItem,
+		TotalQuantity:    data.TotalQuantity,
 	}
 
 	return &res
 }
 
-func (psdc *SDC) ConvertToPlannedScrapQuantityItem(plannedOrder, plannedOrderItem int, componentScrapInPercent, totalQuantity, plannedScrapQuantity float32) *PlannedScrapQuantityItem {
+func (psdc *SDC) ConvertToPlannedScrapQuantityItem(plannedOrder, plannedOrderItem int, componentScrapInPercent float32, totalQuantity, plannedScrapQuantity *float32) *PlannedScrapQuantityItem {
 	pm := &requests.PlannedScrapQuantityItem{}
 
 	pm.PlannedOrder = plannedOrder
@@ -694,6 +740,303 @@ func (psdc *SDC) ConvertToPlannedScrapQuantityItem(plannedOrder, plannedOrderIte
 	}
 
 	return &res
+}
+
+// Component
+func (psdc *SDC) ConvertToProductionOrderComponent(plannedOrder, plannedOrderItem, operations, operationsItem, billOfMaterial, bOMItem int) *ProductionOrderComponent {
+	pm := &requests.ProductionOrderComponent{}
+
+	pm.PlannedOrder = plannedOrder
+	pm.PlannedOrderItem = plannedOrderItem
+	pm.Operations = operations
+	pm.OperationsItem = operationsItem
+	pm.BillOfMaterial = billOfMaterial
+	pm.BOMItem = bOMItem
+
+	data := pm
+	res := ProductionOrderComponent{
+		PlannedOrder:     data.PlannedOrder,
+		PlannedOrderItem: data.PlannedOrderItem,
+		Operations:       data.Operations,
+		OperationsItem:   data.OperationsItem,
+		BillOfMaterial:   data.BillOfMaterial,
+		BOMItem:          data.BOMItem,
+	}
+
+	return &res
+}
+
+// Operation
+func (psdc *SDC) ConvertToProductionRoutingHeaderKey() *ProductionRoutingHeaderKey {
+	pm := &requests.ProductionRoutingHeaderKey{
+		IsMarkedForDeletion: false,
+	}
+
+	data := pm
+	res := ProductionRoutingHeaderKey{
+		ProductionPlantBusinessPartner:     data.ProductionPlantBusinessPartner,
+		ProductionPlantBusinessPartnerTo:   data.ProductionPlantBusinessPartnerTo,
+		ProductionPlantBusinessPartnerFrom: data.ProductionPlantBusinessPartnerFrom,
+		ProductionPlant:                    data.ProductionPlant,
+		ProductionPlantTo:                  data.ProductionPlantTo,
+		ProductionPlantFrom:                data.ProductionPlantFrom,
+		IsMarkedForDeletion:                data.IsMarkedForDeletion,
+	}
+
+	return &res
+}
+
+func (psdc *SDC) ConvertToProductionRoutingHeader(rows *sql.Rows) ([]*ProductionRoutingHeader, error) {
+	defer rows.Close()
+	res := make([]*ProductionRoutingHeader, 0)
+
+	i := 0
+	for rows.Next() {
+		i++
+		pm := &requests.ProductionRoutingHeader{}
+
+		err := rows.Scan(
+			&pm.BusinessPartner,
+			&pm.ProductionRoutingGroup,
+			&pm.ProductionRouting,
+			&pm.ProductionRoutingInternalVers,
+			&pm.IsMarkedForDeletion,
+			&pm.BillOfOperationsDesc,
+			&pm.Plant,
+			&pm.BillOfOperationsUsage,
+			&pm.BillOfOperationsStatus,
+			&pm.ResponsiblePlannerGroup,
+			&pm.MinimumLotSizeQuantity,
+			&pm.MaximumLotSizeQuantity,
+			&pm.BillOfOperationsUnit,
+			&pm.CreationDate,
+			&pm.LastChangeDate,
+			&pm.ValidityStartDate,
+			&pm.ValidityEndDate,
+			&pm.ChangeNumber,
+			&pm.PlainLongText,
+			&pm.MaterialAssignment,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		data := pm
+		res = append(res, &ProductionRoutingHeader{
+			BusinessPartner:               data.BusinessPartner,
+			ProductionRoutingGroup:        data.ProductionRoutingGroup,
+			ProductionRouting:             data.ProductionRouting,
+			ProductionRoutingInternalVers: data.ProductionRoutingInternalVers,
+			IsMarkedForDeletion:           data.IsMarkedForDeletion,
+			BillOfOperationsDesc:          data.BillOfOperationsDesc,
+			Plant:                         data.Plant,
+			BillOfOperationsUsage:         data.BillOfOperationsUsage,
+			BillOfOperationsStatus:        data.BillOfOperationsStatus,
+			ResponsiblePlannerGroup:       data.ResponsiblePlannerGroup,
+			MinimumLotSizeQuantity:        data.MinimumLotSizeQuantity,
+			MaximumLotSizeQuantity:        data.MaximumLotSizeQuantity,
+			BillOfOperationsUnit:          data.BillOfOperationsUnit,
+			CreationDate:                  data.CreationDate,
+			LastChangeDate:                data.LastChangeDate,
+			ValidityStartDate:             data.ValidityStartDate,
+			ValidityEndDate:               data.ValidityEndDate,
+			ChangeNumber:                  data.ChangeNumber,
+			PlainLongText:                 data.PlainLongText,
+			MaterialAssignment:            data.MaterialAssignment,
+		})
+	}
+	if i == 0 {
+		return nil, xerrors.Errorf("'data_platform_production_routing_header_data'テーブルに対象のレコードが存在しません。")
+	}
+
+	return res, nil
+}
+
+func (psdc *SDC) ConvertToProductionRoutingProductPlantKey() *ProductionRoutingProductPlantKey {
+	pm := &requests.ProductionRoutingProductPlantKey{
+		IsMarkedForDeletion: false,
+	}
+
+	data := pm
+	res := ProductionRoutingProductPlantKey{
+		ProductInHeader:        data.ProductInHeader,
+		ProductInHeaderTo:      data.ProductInHeaderTo,
+		ProductInHeaderFrom:    data.ProductInHeaderFrom,
+		BusinessPartner:        data.BusinessPartner,
+		Plant:                  data.Plant,
+		ProductionRoutingGroup: data.ProductionRoutingGroup,
+		ProductionRouting:      data.ProductionRouting,
+		IsMarkedForDeletion:    data.IsMarkedForDeletion,
+	}
+
+	return &res
+}
+
+func (psdc *SDC) ConvertToProductionRoutingProductPlant(rows *sql.Rows) ([]*ProductionRoutingProductPlant, error) {
+	defer rows.Close()
+	res := make([]*ProductionRoutingProductPlant, 0)
+
+	i := 0
+	for rows.Next() {
+		i++
+		pm := &requests.ProductionRoutingProductPlant{}
+
+		err := rows.Scan(
+			&pm.BusinessPartner,
+			&pm.Product,
+			&pm.Plant,
+			&pm.ProductionRoutingGroup,
+			&pm.ProductionRouting,
+			&pm.ProductionRoutingMatlAssgmt,
+			&pm.ProductionRtgMatlAssgmtIntVers,
+			&pm.CreationDate,
+			&pm.LastChangeDate,
+			&pm.ValidityStartDate,
+			&pm.ValidityEndDate,
+			&pm.ChangeNumber,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		data := pm
+		res = append(res, &ProductionRoutingProductPlant{
+			BusinessPartner:                data.BusinessPartner,
+			Product:                        data.Product,
+			Plant:                          data.Plant,
+			ProductionRoutingGroup:         data.ProductionRoutingGroup,
+			ProductionRouting:              data.ProductionRouting,
+			ProductionRoutingMatlAssgmt:    data.ProductionRoutingMatlAssgmt,
+			ProductionRtgMatlAssgmtIntVers: data.ProductionRtgMatlAssgmtIntVers,
+			CreationDate:                   data.CreationDate,
+			LastChangeDate:                 data.LastChangeDate,
+			ValidityStartDate:              data.ValidityStartDate,
+			ValidityEndDate:                data.ValidityEndDate,
+			ChangeNumber:                   data.ChangeNumber,
+		})
+	}
+	if i == 0 {
+		return nil, xerrors.Errorf("'data_platform_production_routing_product_plant_data'テーブルに対象のレコードが存在しません。")
+	}
+
+	return res, nil
+}
+
+func (psdc *SDC) ConvertToProductionRoutingOperationKey() *ProductionRoutingOperationKey {
+	pm := &requests.ProductionRoutingOperationKey{}
+
+	data := pm
+	res := ProductionRoutingOperationKey{
+		ProductionRoutingGroup: data.ProductionRoutingGroup,
+		ProductionRouting:      data.ProductionRouting,
+		Plant:                  data.Plant,
+	}
+
+	return &res
+}
+
+func (psdc *SDC) ConvertToProductionRoutingOperation(rows *sql.Rows) ([]*ProductionRoutingOperation, error) {
+	defer rows.Close()
+	res := make([]*ProductionRoutingOperation, 0)
+
+	i := 0
+	for rows.Next() {
+		i++
+		pm := &requests.ProductionRoutingOperation{}
+
+		err := rows.Scan(
+			&pm.ProductionRoutingGroup,
+			&pm.ProductionRouting,
+			&pm.ProductionRoutingSequence,
+			&pm.ProductionRoutingOpIntID,
+			&pm.ProductionRoutingOpIntVersion,
+			&pm.Operation,
+			&pm.CreationDate,
+			&pm.ChangeNumber,
+			&pm.ValidityStartDate,
+			&pm.ValidityEndDate,
+			&pm.WorkCenterTypeCode,
+			&pm.WorkCenterInternalID,
+			&pm.OperationSetupType,
+			&pm.OperationSetupGroupCategory,
+			&pm.OperationSetupGroup,
+			&pm.OperationReferenceQuantity,
+			&pm.OperationUnit,
+			&pm.OpQtyToBaseQtyNmrtr,
+			&pm.OpQtyToBaseQtyDnmntr,
+			&pm.MaximumWaitDuration,
+			&pm.MaximumWaitDurationUnit,
+			&pm.MinimumWaitDuration,
+			&pm.MinimumWaitDurationUnit,
+			&pm.StandardQueueDuration,
+			&pm.StandardQueueDurationUnit,
+			&pm.MinimumQueueDuration,
+			&pm.MinimumQueueDurationUnit,
+			&pm.StandardMoveDuration,
+			&pm.StandardMoveDurationUnit,
+			&pm.MinimumMoveDuration,
+			&pm.MinimumMoveDurationUnit,
+			&pm.OpIsExtlyProcdWithSubcontrg,
+			&pm.PlannedDeliveryDuration,
+			&pm.MaterialGroup,
+			&pm.PurchasingGroup,
+			&pm.NumberOfOperationPriceUnits,
+			&pm.CostElement,
+			&pm.OpExternalProcessingPrice,
+			&pm.OpExternalProcessingCurrency,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		data := pm
+		res = append(res, &ProductionRoutingOperation{
+			ProductionRoutingGroup:        data.ProductionRoutingGroup,
+			ProductionRouting:             data.ProductionRouting,
+			ProductionRoutingSequence:     data.ProductionRoutingSequence,
+			ProductionRoutingOpIntID:      data.ProductionRoutingOpIntID,
+			ProductionRoutingOpIntVersion: data.ProductionRoutingOpIntVersion,
+			Operation:                     data.Operation,
+			CreationDate:                  data.CreationDate,
+			ChangeNumber:                  data.ChangeNumber,
+			ValidityStartDate:             data.ValidityStartDate,
+			ValidityEndDate:               data.ValidityEndDate,
+			WorkCenterTypeCode:            data.WorkCenterTypeCode,
+			WorkCenterInternalID:          data.WorkCenterInternalID,
+			OperationSetupType:            data.OperationSetupType,
+			OperationSetupGroupCategory:   data.OperationSetupGroupCategory,
+			OperationSetupGroup:           data.OperationSetupGroup,
+			OperationReferenceQuantity:    data.OperationReferenceQuantity,
+			OperationUnit:                 data.OperationUnit,
+			OpQtyToBaseQtyNmrtr:           data.OpQtyToBaseQtyNmrtr,
+			OpQtyToBaseQtyDnmntr:          data.OpQtyToBaseQtyDnmntr,
+			MaximumWaitDuration:           data.MaximumWaitDuration,
+			MaximumWaitDurationUnit:       data.MaximumWaitDurationUnit,
+			MinimumWaitDuration:           data.MinimumWaitDuration,
+			MinimumWaitDurationUnit:       data.MinimumWaitDurationUnit,
+			StandardQueueDuration:         data.StandardQueueDuration,
+			StandardQueueDurationUnit:     data.StandardQueueDurationUnit,
+			MinimumQueueDuration:          data.MinimumQueueDuration,
+			MinimumQueueDurationUnit:      data.MinimumQueueDurationUnit,
+			StandardMoveDuration:          data.StandardMoveDuration,
+			StandardMoveDurationUnit:      data.StandardMoveDurationUnit,
+			MinimumMoveDuration:           data.MinimumMoveDuration,
+			MinimumMoveDurationUnit:       data.MinimumMoveDurationUnit,
+			OpIsExtlyProcdWithSubcontrg:   data.OpIsExtlyProcdWithSubcontrg,
+			PlannedDeliveryDuration:       data.PlannedDeliveryDuration,
+			MaterialGroup:                 data.MaterialGroup,
+			PurchasingGroup:               data.PurchasingGroup,
+			NumberOfOperationPriceUnits:   data.NumberOfOperationPriceUnits,
+			CostElement:                   data.CostElement,
+			OpExternalProcessingPrice:     data.OpExternalProcessingPrice,
+			OpExternalProcessingCurrency:  data.OpExternalProcessingCurrency,
+		})
+	}
+	if i == 0 {
+		return nil, xerrors.Errorf("'data_platform_production_routing_operation_data'テーブルに対象のレコードが存在しません。")
+	}
+
+	return res, nil
 }
 
 // 日付等の処理

@@ -3,15 +3,10 @@ package requests
 type PlannedOrderComponent struct {
 	PlannedOrder                     int      `json:"PlannedOrder"`
 	PlannedOrderItem                 int      `json:"PlannedOrderItem"`
-	PlannedOrderSequence             *string  `json:"PlannedOrderSequence"`
-	PlannedOrderOperation            *string  `json:"PlannedOrderOperation"`
-	OrderInternalBillOfOperations    *string  `json:"OrderInternalBillOfOperations"`
 	BillOfMaterial                   *int     `json:"BillOfMaterial"`
 	BOMItem                          *int     `json:"BOMItem"`
-	BOMItemDescription               *string  `json:"BOMItemDescription"`
-	BillOfMaterialCategory           *string  `json:"BillOfMaterialCategory"`
-	BillOfMaterialItemNumber         *int     `json:"BillOfMaterialItemNumber"`
-	BillOfMaterialInternalID         *int     `json:"BillOfMaterialInternalID"`
+	Operations                       *int     `json:"Operations"`
+	OperationsItem                   *int     `json:"OperationsItem"`
 	Reservation                      *int     `json:"Reservation"`
 	ReservationItem                  *int     `json:"ReservationItem"`
 	ComponentProduct                 *string  `json:"ComponentProduct"`
@@ -22,6 +17,7 @@ type PlannedOrderComponent struct {
 	ComponentProductRequirementDate  *string  `json:"ComponentProductRequirementDate"`
 	ComponentProductRequirementTime  *string  `json:"ComponentProductRequirementTime"`
 	ComponentProductRequiredQuantity *float32 `json:"ComponentProductRequiredQuantity"`
+	ComponentProductBusinessPartner  *int     `json:"ComponentProductBusinessPartner"`
 	BaseUnit                         *string  `json:"BaseUnit"`
 	MRPArea                          *string  `json:"MRPArea"`
 	MRPController                    *string  `json:"MRPController"`

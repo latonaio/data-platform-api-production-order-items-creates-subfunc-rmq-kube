@@ -10,7 +10,7 @@
   "message": {
     "Item": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000001,
         "ProductionOrderItem": 1,
         "CreationDate": "2023-04-17",
         "LastChangeDate": "2023-04-17",
@@ -58,7 +58,7 @@
     ],
     "ItemComponent": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000001,
         "ProductionOrderItem": 1,
         "Operations": 0,
         "OperationsItem": 0,
@@ -98,7 +98,7 @@
     ],
     "ItemComponentStockConfirmation": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000001,
         "ProductionOrderItem": 1,
         "Operations": 0,
         "OperationsItem": 0,
@@ -112,7 +112,7 @@
     ],
     "ItemComponentCosting": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000001,
         "ProductionOrderItem": 1,
         "Operations": 0,
         "OperationsItem": 0,
@@ -126,7 +126,7 @@
     ],
     "ItemOperations": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000001,
         "ProductionOrderItem": 1,
         "Operations": 0,
         "OperationsItem": 0,

@@ -33,11 +33,11 @@
 		"ProductionPlantStorageLocation": ["0002"],
 		"ProductionPlantStorageLocationTo": "",
 		"ProductionPlantStorageLocationFrom": "",
-		"ExecuteProductAvailabilityCheck": null,
-		"ReleaseProductionOrder": null
+		"ExecuteProductAvailabilityCheck": true,
+		"ReleaseProductionOrder": true
 	},
 	"ProductionOrder": {
-		"ProductionOrder": 1,
+		"ProductionOrder": 240000001,
 		"ProductionOrderType": "",
 		"CreationDate": "",
 		"LastChangeDate": "",
@@ -53,7 +53,7 @@
 		"MRPArea": "",
 		"MRPController": "",
 		"ProductionSupervisor": "",
-		"ProductionVersion": "",
+		"ProductionVersion": null,
 		"PlannedOrder": null,
 		"OrderID": null,
 		"OrderItem": null,
@@ -84,18 +84,24 @@
 				"ItemIsMarkedForDeletion": null,
 				"ProductionOrderHasGeneratedOperations": null,
 				"ProductAvailabilityIsNotChecked": null,
+				"PrecedingItem": null,
+				"FollowingItem": null,
 				"Product": "",
 				"ProductionPlant": "",
 				"ProductionPlantBusinessPartner": null,
 				"ProductionPlantStorageLocation": "",
-				"InternalBillOfOperations": null,
 				"MRPArea": "",
 				"MRPController": "",
 				"ProductionSupervisor": "",
-				"ProductionVersion": "",
+				"ProductionVersion": null,
 				"PlannedOrder": null,
 				"OrderID": null,
 				"OrderItem": null,
+				"MinimumLotSizeQuantity": null,
+				"StandardLotSizeQuantity": null,
+				"LotSizeRoundingQuantity": null,
+				"MaximumLotSizeQuantity": null,
+				"LotSizeIsFixed": null,
 				"ProductionOrderPlannedStartDate": "",
 				"ProductionOrderPlannedStartTime": "",
 				"ProductionOrderPlannedEndDate": "",
@@ -111,23 +117,24 @@
 				"PlannedScrapQuantity": null,
 				"ConfirmedYieldQuantity": null,
 				"ProductionOrderItemText": "",
-				"Component": [
+				"ItemComponent": [
 					{
-						"ProductionOrderSequence": "",
-						"ProductionOrderOperation": "",
-						"OrderInternalBillOfOperations": "",
+						"Operations": null,
+						"OperationsItem": null,
+						"BillOfMaterial": null,
+						"BillOfMaterialItem": null,
 						"Reservation": null,
 						"ReservationItem": null,
 						"ComponentProduct": "",
 						"ComponentProductRequirementDate": "",
 						"ComponentProductRequirementTime": "",
 						"ComponentProductIsMarkedForBackflush": null,
+						"ComponentProductBusinessPartner": null,
+						"StockConfirmationPlant": "",
 						"PlannedOrder": null,
 						"OrderID": null,
 						"OrderItem": null,
 						"SortField": "",
-						"BillOfMaterial": null,
-						"BOMItem": null,
 						"BOMItemDescription": "",
 						"StorageLocation": "",
 						"Batch": "",
@@ -135,7 +142,7 @@
 						"UnloadingPointName": "",
 						"ProductCompIsAlternativeItem": null,
 						"CostingPolicy": "",
-						"PriceUnitQty": null,
+						"PriceUnitQty": "",
 						"StandardPrice": null,
 						"MovingAveragePrice": null,
 						"ComponentScrapInPercent": null,
@@ -146,52 +153,45 @@
 						"ConfirmedAvailableQuantity": null,
 						"ProductCompOriginalQuantity": null,
 						"IsMarkedForDeletion": null,
-						"ComponentStockConfirmation": [
+						"ItemComponentStockConfirmation": [
 							{
-								"ComponentProduct": "",
-								"ComponentProductRequirementDate": "",
-								"ComponentProductRequirementTime": "",
 								"InventoryStockType": "",
 								"InventorySpecialStockType": "",
 								"AvailableProductStock": null,
 								"IsMarkedForDeletion": null
 							}
 						],
-						"ComponentCosting": [
+						"ItemComponentCosting": [
 							{
 								"ComponentProduct": "",
 								"Currency": "",
 								"CostingAmount": null,
 								"IsMarkedForDeletion": null
 							}
-						],
-						"Operation": [
-							{
-								"OrderIntBillOfOperationsItem": null,
-								"ProductionOrderSequenceText": "",
-								"ProductionOrderOperationText": "",
-								"OperationIsReleased": null,
-								"OperationIsPartiallyConfirmed": null,
-								"OperationIsConfirmed": null,
-								"OperationIsClosed": null,
-								"OperationIsMarkedForDeletion": null,
-								"ProductionPlant": "",
-								"WorkCenter": null,
-								"OperationErlstSchedldExecStrtDte": "",
-								"OperationErlstSchedldExecStrtTme": "",
-								"OperationErlstSchedldExecEndDate": "",
-								"OperationErlstSchedldExecEndTme": "",
-								"OperationActualExecutionStartDate": "",
-								"OperationActualExecutionStartTime": "",
-								"OperationActualExecutionEndDate": "",
-								"OperationActualExecutionEndTime": "",
-								"ErlstSchedldExecDurnInWorkdays": "",
-								"OperationActualExecutionDays": "",
-								"OperationUnit": "",
-								"OperationPlannedTotalQuantity": null,
-								"OperationTotalConfirmedYieldQuantity": null
-							}
-						]
+						]		
+					}
+				],
+				"ItemOperations": [
+					{
+						"Operations": null,
+						"OperationsItem": null,
+						"OperationsText": "",
+						"SequenceText": "",
+						"OperationIsPartiallyConfirmed": null,
+						"OperationIsConfirmed": null,
+						"OperationIsClosed": null,
+						"OperationErlstSchedldExecStrtDte": "",
+						"OperationErlstSchedldExecStrtTme": "",
+						"OperationErlstSchedldExecEndDate": "",
+						"OperationErlstSchedldExecEndTme": "",
+						"OperationActualExecutionStartDate": "",
+						"OperationActualExecutionStartTime": "",
+						"OperationActualExecutionEndDate": "",
+						"OperationActualExecutionEndTime": "",
+						"ErlstSchedldExecDurnInWorkdays": "",
+						"OperationActualExecutionDays": "",
+						"OperationPlannedTotalQuantity": null,
+						"OperationTotalConfirmedYieldQuantity": null
 					}
 				]
 			}

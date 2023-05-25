@@ -126,63 +126,114 @@ func (f *SubFunction) CreateSdc(
 	wg.Add(1)
 	go func(wg *sync.WaitGroup) {
 		defer wg.Done()
-
-		// I-1-1.計画手配ヘッダデータの取得
-		psdc.PlannedOrderHeder, e = f.PlannedOrderHederInBulkProcess(sdc, psdc)
+		// 1-1-1.計画手配ヘッダデータの取得
+		psdc.PlannedOrderHeader, e = f.PlannedOrderHeaderInBulkProcess(sdc, psdc)
 		if e != nil {
 			err = e
 			return
 		}
 
-		// I-1-2.計画手配明細データの取得  //I-1-1
+		// 1-1-2.計画手配明細データの取得  //1-1-1
 		psdc.PlannedOrderItem, e = f.PlannedOrderItemInBulkProcess(sdc, psdc)
 		if e != nil {
 			err = e
 			return
 		}
 
-		// I-1-3.計画手配構成品目データの取得  //I-1-2
+		// 1-1-3.計画手配構成品目データの取得  //1-1-2
 		psdc.PlannedOrderComponent, e = f.PlannedOrderComponent(sdc, psdc)
 		if e != nil {
 			err = e
 			return
 		}
 
-		// 2-1-1. ロット管理品目の確認(品目マスタBPプラントデータの取得)  //I-1-2,I-1-3
-		psdc.ProductMasterBPPlant, e = f.ProductMasterBPPlant(sdc, psdc)
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+			// 2-0. ProductionOrderItem  //1-1-2
+			psdc.ProductionOrderItem = f.ProductionOrderItem(sdc, psdc)
+		}(wg)
+
+		// 2-1-0. 在庫確認実行の判断
+		psdc.ExecuteProductAvailabilityCheck, e = f.ExecuteProductAvailabilityCheck(sdc, psdc)
 		if e != nil {
 			err = e
 			return
 		}
 
-		// 2-3-1. ロットマスタデータの取得 //I-1-3
-		psdc.BatchMasterRecordBatch, e = f.BatchMasterRecordBatch(sdc, psdc)
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+			if psdc.ExecuteProductAvailabilityCheck.ExecuteProductAvailabilityCheck {
+				// 2-1-1. ロット管理品目の確認(品目マスタBPプラントデータの取得)  //1-1-2,1-1-3
+				psdc.ProductMasterBPPlant, e = f.ProductMasterBPPlant(sdc, psdc)
+				if e != nil {
+					err = e
+					return
+				}
+
+				// 2-3-1. ロットマスタデータの取得 //1-1-3
+				psdc.BatchMasterRecordBatch, e = f.BatchMasterRecordBatch(sdc, psdc)
+				if e != nil {
+					err = e
+					return
+				}
+
+				// 2-2-1. 構成品目ごとの在庫確認①(通常の在庫確認)   //1-1-2,1-1-3,2-1-1,2-3-1
+				psdc.StockConfirmation, e = f.StockConfirmation(sdc, psdc)
+				if e != nil {
+					err = e
+					return
+				}
+			}
+
+			// 2-4-0. ItemIsPartiallyConfirmedのセット  //2-2-1
+			psdc.ItemIsPartiallyConfirmed = f.ItemIsPartiallyConfirmed(sdc, psdc)
+
+			// 2-4-1. ItemIsConfirmedのセット  //2-2-1
+			psdc.ItemIsConfirmed = f.ItemIsConfirmed(sdc, psdc)
+
+			// 2-4-2. ProductAvailabilityIsNotChecked  //2-2-1
+			psdc.ProductAvailabilityIsNotChecked = f.ProductAvailabilityIsNotChecked(sdc, psdc)
+
+			// 2-6. 製造指図明細への数量のセット  //2-2-1
+			psdc.TotalQuantity = f.TotalQuantity(sdc, psdc)
+
+			// 2-7. PlannedScrapQuantity  //1-1-3,2-6
+			psdc.PlannedScrapQuantityItem = f.PlannedScrapQuantityItem(sdc, psdc)
+		}(wg)
+
+		wg.Add(1)
+		go func(wg *sync.WaitGroup) {
+			defer wg.Done()
+			// 3-1. Componentデータの生成  //1-1-3
+			psdc.ProductionOrderComponent = f.ProductionOrderComponent(sdc, psdc)
+		}(wg)
+	}(&wg)
+
+	wg.Add(1)
+	go func(wg *sync.WaitGroup) {
+		defer wg.Done()
+		// 4-1. 作業手順ヘッダデータの取得
+		psdc.ProductionRoutingHeader, e = f.ProductionRoutingHeaderInBulkProcess(sdc, psdc)
 		if e != nil {
 			err = e
 			return
 		}
 
-		// 2-2-1. 構成品目ごとの在庫確認①(通常の在庫確認)   //I-1-2,I-1-3,2-1-1,2-3-1
-		psdc.StockConfirmation, e = f.StockConfirmation(sdc, psdc)
+		// 4-2. 作業手順製品プラントデータの取得  //4-1
+		psdc.ProductionRoutingProductPlant, e = f.ProductionRoutingProductPlantInBulkProcess(sdc, psdc)
 		if e != nil {
 			err = e
 			return
 		}
 
-		// 2-0. ProductionOrderItem
-		psdc.ProductionOrderItem = f.ProductionOrderItem(sdc, psdc)
-
-		// 2-4-2. ProductAvailabilityIsNotChecked //2-1
-		psdc.ProductAvailabilityIsNotChecked = f.ProductAvailabilityIsNotChecked(sdc, psdc)
-
-		// 2-5. InternalBillOfOperations  //1-1-3
-		psdc.InternalBillOfOperations = f.InternalBillOfOperations(sdc, psdc)
-
-		// 2-6. 製造指図明細への数量のセット  //2-2-1
-		psdc.TotalQuantity = f.TotalQuantity(sdc, psdc)
-
-		// 2-7. PlannedScrapQuantity  //1-1-3,2-6
-		psdc.PlannedScrapQuantityItem = f.PlannedScrapQuantityItem(sdc, psdc)
+		// 4-3. 作業手順作業データの取得  //4-2
+		psdc.ProductionRoutingOperation, e = f.ProductionRoutingOperation(sdc, psdc)
+		if e != nil {
+			err = e
+			return
+		}
 	}(&wg)
 
 	wg.Add(1)

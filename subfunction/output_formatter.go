@@ -16,14 +16,32 @@ func (f *SubFunction) SetValue(
 		return err
 	}
 
-	// component, err := dpfm_api_output_formatter.ConvertToComponent(sdc, psdc)
-	// if err != nil {
-	// 	return err
-	// }
+	component, err := dpfm_api_output_formatter.ConvertToComponent(sdc, psdc)
+	if err != nil {
+		return err
+	}
+
+	componentStockConfirmation, err := dpfm_api_output_formatter.ConvertToComponentStockConfirmation(sdc, psdc)
+	if err != nil {
+		return err
+	}
+
+	componentCosting, err := dpfm_api_output_formatter.ConvertToComponentCosting(sdc, psdc)
+	if err != nil {
+		return err
+	}
+
+	operations, err := dpfm_api_output_formatter.ConvertToOperations(sdc, psdc)
+	if err != nil {
+		return err
+	}
 
 	osdc.Message = dpfm_api_output_formatter.Message{
-		Item: item,
-		// Component: component,
+		Item:                           item,
+		ItemComponent:                  component,
+		ItemComponentStockConfirmation: componentStockConfirmation,
+		ItemComponentCosting:           componentCosting,
+		ItemOperations:                 operations,
 	}
 
 	return err

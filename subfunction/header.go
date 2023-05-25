@@ -9,22 +9,22 @@ import (
 	"golang.org/x/xerrors"
 )
 
-func (f *SubFunction) PlannedOrderHederInBulkProcess(
+func (f *SubFunction) PlannedOrderHeaderInBulkProcess(
 	sdc *api_input_reader.SDC,
 	psdc *api_processing_data_formatter.SDC,
-) ([]*api_processing_data_formatter.PlannedOrderHeder, error) {
-	data := make([]*api_processing_data_formatter.PlannedOrderHeder, 0)
+) ([]*api_processing_data_formatter.PlannedOrderHeader, error) {
+	data := make([]*api_processing_data_formatter.PlannedOrderHeader, 0)
 	var err error
 
 	processType := psdc.ProcessType
 
 	if processType.PluralitySpec {
-		data, err = f.PlannedOrderHederByPluralitySpec(sdc, psdc)
+		data, err = f.PlannedOrderHeaderByPluralitySpec(sdc, psdc)
 		if err != nil {
 			return nil, err
 		}
 	} else if processType.RangeSpec {
-		data, err = f.PlannedOrderHederByRangeSpec(sdc, psdc)
+		data, err = f.PlannedOrderHeaderByRangeSpec(sdc, psdc)
 		if err != nil {
 			return nil, err
 		}
@@ -35,13 +35,13 @@ func (f *SubFunction) PlannedOrderHederInBulkProcess(
 	return data, nil
 }
 
-func (f *SubFunction) PlannedOrderHederByPluralitySpec(
+func (f *SubFunction) PlannedOrderHeaderByPluralitySpec(
 	sdc *api_input_reader.SDC,
 	psdc *api_processing_data_formatter.SDC,
-) ([]*api_processing_data_formatter.PlannedOrderHeder, error) {
+) ([]*api_processing_data_formatter.PlannedOrderHeader, error) {
 	args := make([]interface{}, 0)
 
-	dataKey := psdc.ConvertToPlannedOrderHederKey()
+	dataKey := psdc.ConvertToPlannedOrderHeaderKey()
 
 	mrpArea := sdc.InputParameters.MRPArea
 	ownerProductionPlantBusinessPartner := sdc.InputParameters.OwnerProductionPlantBusinessPartner
@@ -72,7 +72,6 @@ func (f *SubFunction) PlannedOrderHederByPluralitySpec(
 
 	args = append(args, dataKey.PlannedOrderType, dataKey.PlannedOrderIsReleased, dataKey.IsMarkedForDeletion)
 
-	// TODO: BaseUnit除いてる
 	rows, err := f.db.Query(
 		`SELECT PlannedOrder, PlannedOrderType, Product, ProductDeliverFromParty, ProductDeliverToParty, OriginIssuingPlant,
 		OriginIssuingPlantStorageLocation, DestinationReceivingPlant, DestinationReceivingPlantStorageLocation,
@@ -95,7 +94,7 @@ func (f *SubFunction) PlannedOrderHederByPluralitySpec(
 	}
 	defer rows.Close()
 
-	data, err := psdc.ConvertToPlannedOrderHeder(rows)
+	data, err := psdc.ConvertToPlannedOrderHeader(rows)
 	if err != nil {
 		return nil, err
 	}
@@ -103,13 +102,13 @@ func (f *SubFunction) PlannedOrderHederByPluralitySpec(
 	return data, err
 }
 
-func (f *SubFunction) PlannedOrderHederByRangeSpec(
+func (f *SubFunction) PlannedOrderHeaderByRangeSpec(
 	sdc *api_input_reader.SDC,
 	psdc *api_processing_data_formatter.SDC,
-) ([]*api_processing_data_formatter.PlannedOrderHeder, error) {
+) ([]*api_processing_data_formatter.PlannedOrderHeader, error) {
 	args := make([]interface{}, 0)
 
-	dataKey := psdc.ConvertToPlannedOrderHederKey()
+	dataKey := psdc.ConvertToPlannedOrderHeaderKey()
 
 	dataKey.MRPAreaTo = sdc.InputParameters.MRPAreaTo
 	dataKey.MRPAreaFrom = sdc.InputParameters.MRPAreaFrom
@@ -148,7 +147,7 @@ func (f *SubFunction) PlannedOrderHederByRangeSpec(
 	}
 	defer rows.Close()
 
-	data, err := psdc.ConvertToPlannedOrderHeder(rows)
+	data, err := psdc.ConvertToPlannedOrderHeader(rows)
 	if err != nil {
 		return nil, err
 	}
@@ -246,7 +245,7 @@ func (f *SubFunction) PlannedOrderItemByPluralitySpec(
 
 	dataKey := psdc.ConvertToPlannedOrderItemKey()
 
-	for _, v := range psdc.PlannedOrderHeder {
+	for _, v := range psdc.PlannedOrderHeader {
 		dataKey.PlannedOrder = append(dataKey.PlannedOrder, v.PlannedOrder)
 	}
 	dataKey.MRPArea = append(dataKey.MRPArea, *sdc.InputParameters.MRPArea...)
@@ -334,13 +333,13 @@ func (f *SubFunction) PlannedOrderComponent(
 	args = append(args, dataKey.IsMarkedForDeletion)
 
 	rows, err := f.db.Query(
-		`SELECT PlannedOrder, PlannedOrderItem, PlannedOrderSequence, PlannedOrderOperation, OrderInternalBillOfOperations,
-		BillOfMaterial, BOMItem, BOMItemDescription, BillOfMaterialCategory, BillOfMaterialItemNumber, BillOfMaterialInternalID, 
-		Reservation, ReservationItem, ComponentProduct, ComponentProductDeliverFromParty, ComponentProductDeliverToParty,
+		`SELECT PlannedOrder, PlannedOrderItem, BillOfMaterial, BOMItem, Operations, OperationsItem, Reservation,
+		ReservationItem, ComponentProduct, ComponentProductDeliverFromParty, ComponentProductDeliverToParty,
 		ComponentProductBuyer, ComponentProductSeller, ComponentProductRequirementDate, ComponentProductRequirementTime,
-		ComponentProductRequiredQuantity, BaseUnit, MRPArea, MRPController, StockConfirmationPartnerFunction,
-		StockConfirmationBusinessPartner, StockConfirmationPlant, StockConfirmationPlantBatch, StorageLocationForMRP,
-		ComponentWithdrawnQuantity, ComponentScrapInPercent, OperationScrapInPercent, QuantityIsFixed, LastChangeDateTime, IsMarkedForDeletion
+		ComponentProductRequiredQuantity, ComponentProductBusinessPartner, BaseUnit, MRPArea, MRPController,
+		StockConfirmationPartnerFunction, StockConfirmationBusinessPartner, StockConfirmationPlant, StockConfirmationPlantBatch,
+		StorageLocationForMRP, ComponentWithdrawnQuantity, ComponentScrapInPercent, OperationScrapInPercent, QuantityIsFixed,
+		LastChangeDateTime, IsMarkedForDeletion
 		FROM DataPlatformMastersAndTransactionsMysqlKube.data_platform_planned_order_component_data
 		WHERE (PlannedOrder, PlannedOrderItem) IN ( `+repeat+` )
 		AND IsMarkedForDeletion = ?;`, args...,

@@ -14,7 +14,7 @@ func ConvertToItem(
 ) ([]*Item, error) {
 	var err error
 
-	items := make([]*Item, 0, len(sdc.Header.Item))
+	items := make([]*Item, 0, len(psdc.ProductionOrderItem))
 	for i := range psdc.ProductionOrderItem {
 		item := &Item{}
 		inputItem := sdc.Header.Item[0]
@@ -25,26 +25,97 @@ func ConvertToItem(
 			return nil, err
 		}
 
+		plannedOrder := psdc.ProductionOrderItem[i].PlannedOrder
+		plannedOrderItem := psdc.ProductionOrderItem[i].PlannedOrderItem
+
+		quantityIdx := -1
+		for j, v := range psdc.TotalQuantity {
+			if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem {
+				quantityIdx = j
+				break
+			}
+		}
+		if quantityIdx == -1 {
+			continue
+		}
+
+		sQuantityIdx := -1
+		for j, v := range psdc.PlannedScrapQuantityItem {
+			if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem {
+				sQuantityIdx = j
+				break
+			}
+		}
+		if sQuantityIdx == -1 {
+			continue
+		}
+
 		item.ProductionOrder = sdc.Header.ProductionOrder
 		item.ProductionOrderItem = psdc.ProductionOrderItem[i].ProductionOrderItemNumber
-		item.CreationDate = &psdc.CreationDateItem.CreationDate
-		item.LastChangeDate = &psdc.LastChangeDateItem.LastChangeDate
+		item.CreationDate = psdc.CreationDateItem.CreationDate
+		item.LastChangeDate = psdc.LastChangeDateItem.LastChangeDate
 		item.ItemIsReleased = getBoolPtr(true)
-		// item.ItemIsPartiallyConfirmed =  //2-1-4
-		// item.ItemIsConfirmed =  //2-1-4
 		item.ItemIsLocked = getBoolPtr(false)
 		item.ItemIsMarkedForDeletion = getBoolPtr(false)
 		item.ProductionOrderHasGeneratedOperations = getBoolPtr(true)
 		item.ProductAvailabilityIsNotChecked = psdc.ProductAvailabilityIsNotChecked.ProductAvailabilityIsNotChecked
-		// item.InternalBillOfOperations = psdc.InternalBillOfOperations[i].InternalBillOfOperations
+		// item.PrecedingItem = //TBA
+		// item.FollowingItem = //TBA
+		item.Product = psdc.PlannedOrderItem[i].Product
+		item.ProductionPlant = getValue(psdc.PlannedOrderItem[i].ProductionPlant)
+		item.ProductionPlantBusinessPartner = getValue(psdc.PlannedOrderItem[i].ProductionPlantBusinessPartner)
+		item.ProductionPlantStorageLocation = psdc.PlannedOrderItem[i].ProductionPlantStorageLocation
+		item.MRPArea = psdc.PlannedOrderItem[i].MRPArea
 		item.MRPController = psdc.PlannedOrderItem[i].MRPController
-		item.ProductionVersion = getStringPtr("0001")
+		// item.ProductionVersion = getStringPtr("0001") //DBがstring型からint型に変更
 		item.PlannedOrder = &psdc.PlannedOrderItem[i].PlannedOrder
 		item.OrderID = psdc.PlannedOrderItem[i].OrderID
 		item.OrderItem = psdc.PlannedOrderItem[i].OrderItem
-		item.TotalQuantity = &psdc.TotalQuantity[i].TotalQuantity
-		item.PlannedScrapQuantity = &psdc.PlannedScrapQuantityItem[i].PlannedScrapQuantity
-		item.ConfirmedYieldQuantity = &psdc.TotalQuantity[i].TotalQuantity
+		// item.MinimumLotSizeQuantity = //TBA
+		// item.StandardLotSizeQuantity = //TBA
+		// item.LotSizeRoundingQuantity = //TBA
+		// item.MaximumLotSizeQuantity = //TBA
+		// item.LotSizeIsFixed =
+		item.ProductionOrderPlannedStartDate = psdc.PlannedOrderItem[i].PlannedOrderPlannedStartDate
+		item.ProductionOrderPlannedStartTime = psdc.PlannedOrderItem[i].PlannedOrderPlannedStartTime
+		item.ProductionOrderPlannedEndDate = psdc.PlannedOrderItem[i].PlannedOrderPlannedEndDate
+		item.ProductionOrderPlannedEndTime = psdc.PlannedOrderItem[i].PlannedOrderPlannedEndTime
+		item.ProductionUnit = psdc.PlannedOrderItem[i].PlannedOrderIssuingUnit
+		item.TotalQuantity = getValue(psdc.TotalQuantity[quantityIdx].TotalQuantity)
+		item.PlannedScrapQuantity = psdc.PlannedScrapQuantityItem[sQuantityIdx].PlannedScrapQuantity
+		item.ConfirmedYieldQuantity = psdc.TotalQuantity[quantityIdx].TotalQuantity
+
+		if psdc.ItemIsPartiallyConfirmed == nil || len(psdc.ItemIsPartiallyConfirmed) == 0 {
+			item.ItemIsPartiallyConfirmed = nil
+		} else {
+			pConfirmedIdx := -1
+			for j, v := range psdc.ItemIsPartiallyConfirmed {
+				if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem {
+					pConfirmedIdx = j
+					break
+				}
+			}
+			if pConfirmedIdx == -1 {
+				continue
+			}
+			item.ItemIsPartiallyConfirmed = &psdc.ItemIsPartiallyConfirmed[pConfirmedIdx].ItemIsPartiallyConfirmed
+		}
+
+		if psdc.ItemIsConfirmed == nil || len(psdc.ItemIsConfirmed) == 0 {
+			item.ItemIsConfirmed = nil
+		} else {
+			confirmedIdx := -1
+			for j, v := range psdc.ItemIsConfirmed {
+				if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem {
+					confirmedIdx = j
+					break
+				}
+			}
+			if confirmedIdx == -1 {
+				continue
+			}
+			item.ItemIsConfirmed = &psdc.ItemIsConfirmed[confirmedIdx].ItemIsConfirmed
+		}
 
 		items = append(items, item)
 	}
@@ -55,63 +126,262 @@ func ConvertToItem(
 func ConvertToComponent(
 	sdc *api_input_reader.SDC,
 	psdc *api_processing_data_formatter.SDC,
-) ([]*Component, error) {
+) ([]*ItemComponent, error) {
+	var err error
+
+	components := make([]*ItemComponent, 0, len(psdc.ProductionOrderComponent))
+	for i := range psdc.ProductionOrderComponent {
+		inputComponent := sdc.Header.Item[0].ItemComponent[0]
+
+		component := &ItemComponent{}
+
+		// 入力ファイル
+		component, err = jsonTypeConversion(component, inputComponent)
+		if err != nil {
+			return nil, err
+		}
+
+		plannedOrder := psdc.ProductionOrderComponent[i].PlannedOrder
+		plannedOrderItem := psdc.ProductionOrderComponent[i].PlannedOrderItem
+
+		orderItemIdx := -1
+		for j, v := range psdc.ProductionOrderItem {
+			if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem {
+				orderItemIdx = j
+				break
+			}
+		}
+		if orderItemIdx == -1 {
+			continue
+		}
+
+		itemIdx := -1
+		for j, v := range psdc.PlannedOrderItem {
+			if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem {
+				itemIdx = j
+				break
+			}
+		}
+		if itemIdx == -1 {
+			continue
+		}
+
+		operations := psdc.ProductionOrderComponent[i].Operations
+		operationsItem := psdc.ProductionOrderComponent[i].OperationsItem
+		billOfMaterial := psdc.ProductionOrderComponent[i].BillOfMaterial
+		bomItem := psdc.ProductionOrderComponent[i].BOMItem
+
+		componentIdx := -1
+		for j, v := range psdc.PlannedOrderComponent {
+			if v.Operations == nil || v.OperationsItem == nil || v.BillOfMaterial == nil || v.BOMItem == nil {
+				continue
+			}
+			if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem &&
+				*v.Operations == operations && *v.OperationsItem == operationsItem &&
+				*v.BillOfMaterial == billOfMaterial && *v.BOMItem == bomItem {
+				componentIdx = j
+				break
+			}
+		}
+		if componentIdx == -1 {
+			continue
+		}
+
+		businessPartner := psdc.PlannedOrderComponent[i].StockConfirmationBusinessPartner
+		product := psdc.PlannedOrderComponent[i].ComponentProduct
+		plant := psdc.PlannedOrderComponent[i].StockConfirmationPlant
+		batch := psdc.PlannedOrderComponent[i].StockConfirmationPlantBatch
+		productStockAvailabilityDate := psdc.PlannedOrderComponent[i].ComponentProductRequirementDate
+
+		if businessPartner == nil || product == nil || plant == nil || batch == nil || productStockAvailabilityDate == nil {
+			continue
+		}
+
+		component.ProductionOrder = sdc.Header.ProductionOrder
+		component.ProductionOrderItem = psdc.ProductionOrderItem[orderItemIdx].ProductionOrderItemNumber
+		// component.Operations = //TBA
+		// component.OperationsItem = //TBA
+		component.BillOfMaterial = getValue(psdc.PlannedOrderComponent[componentIdx].BillOfMaterial)
+		component.BillOfMaterialItem = getValue(psdc.PlannedOrderComponent[componentIdx].BOMItem)
+		component.Reservation = psdc.PlannedOrderComponent[componentIdx].Reservation
+		component.ReservationItem = psdc.PlannedOrderComponent[componentIdx].ReservationItem
+		component.ComponentProduct = psdc.PlannedOrderComponent[componentIdx].ComponentProduct
+		component.ComponentProductRequirementDate = psdc.PlannedOrderComponent[componentIdx].ComponentProductRequirementDate
+		component.ComponentProductRequirementTime = psdc.PlannedOrderComponent[componentIdx].ComponentProductRequirementTime
+		component.ComponentProductIsMarkedForBackflush = getBoolPtr(false)
+		component.ComponentProductBusinessPartner = psdc.PlannedOrderComponent[componentIdx].ComponentProductBusinessPartner
+		component.StockConfirmationPlant = psdc.PlannedOrderComponent[componentIdx].StockConfirmationPlant
+		component.PlannedOrder = &psdc.PlannedOrderComponent[componentIdx].PlannedOrder
+		component.OrderID = psdc.PlannedOrderItem[itemIdx].OrderID     //1-1-3にない
+		component.OrderItem = psdc.PlannedOrderItem[itemIdx].OrderItem //1-1-3にない
+		// component.BOMItemDescription = //planned_order_componentからBOMItemDescriptionがなくなった
+		component.StorageLocation = sdc.Header.Item[0].ProductionPlantStorageLocation
+		component.ProductCompIsAlternativeItem = getBoolPtr(false)
+		component.CostingPolicy = getStringPtr("S")
+		component.ComponentScrapInPercent = psdc.PlannedOrderComponent[componentIdx].ComponentScrapInPercent
+		component.OperationScrapInPercent = psdc.PlannedOrderComponent[componentIdx].OperationScrapInPercent
+		component.BaseUnit = psdc.PlannedOrderComponent[componentIdx].BaseUnit
+		component.RequiredQuantity = psdc.PlannedOrderComponent[componentIdx].ComponentProductRequiredQuantity
+		component.WithdrawnQuantity = psdc.PlannedOrderComponent[componentIdx].ComponentWithdrawnQuantity
+		component.ProductCompOriginalQuantity = psdc.PlannedOrderComponent[componentIdx].ComponentProductRequiredQuantity
+		component.IsMarkedForDeletion = getBoolPtr(false)
+
+		if psdc.StockConfirmation == nil || len(psdc.StockConfirmation) == 0 {
+			component.Batch = nil
+			component.ConfirmedAvailableQuantity = nil
+		} else {
+			stockConfIdx := -1
+			for j, v := range psdc.StockConfirmation {
+				if len(v.Batch) == 0 {
+					if v.BusinessPartner == *businessPartner && v.Product == *product &&
+						v.Plant == *plant && v.ProductStockAvailabilityDate == *productStockAvailabilityDate {
+						stockConfIdx = j
+						break
+					}
+				} else {
+					if v.BusinessPartner == *businessPartner && v.Product == *product &&
+						v.Plant == *plant && v.Batch == *batch && v.ProductStockAvailabilityDate == *productStockAvailabilityDate {
+						stockConfIdx = j
+						break
+					}
+				}
+			}
+			if stockConfIdx == -1 {
+				continue
+			}
+			component.Batch = &psdc.StockConfirmation[stockConfIdx].Batch
+			component.ConfirmedAvailableQuantity = &psdc.StockConfirmation[stockConfIdx].OpenConfirmedQuantityInBaseUnit
+		}
+
+		components = append(components, component)
+	}
+
+	return components, nil
+}
+
+func ConvertToComponentStockConfirmation(
+	sdc *api_input_reader.SDC,
+	psdc *api_processing_data_formatter.SDC,
+) ([]*ItemComponentStockConfirmation, error) {
+	var err error
+
+	componentStockConfirmations := make([]*ItemComponentStockConfirmation, 0, len(psdc.ProductionOrderComponent))
+	for i := range psdc.ProductionOrderComponent {
+		inputComponentStockConfirmation := sdc.Header.Item[0].ItemComponent[0].ItemComponentStockConfirmation[0]
+
+		componentStockConfirmation := &ItemComponentStockConfirmation{}
+
+		// 入力ファイル
+		componentStockConfirmation, err = jsonTypeConversion(componentStockConfirmation, inputComponentStockConfirmation)
+		if err != nil {
+			return nil, err
+		}
+
+		plannedOrder := psdc.ProductionOrderComponent[i].PlannedOrder
+		plannedOrderItem := psdc.ProductionOrderComponent[i].PlannedOrderItem
+
+		orderItemIdx := -1
+		for j, v := range psdc.ProductionOrderItem {
+			if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem {
+				orderItemIdx = j
+				break
+			}
+		}
+		if orderItemIdx == -1 {
+			continue
+		}
+
+		componentStockConfirmation.ProductionOrder = sdc.Header.ProductionOrder
+		componentStockConfirmation.ProductionOrderItem = psdc.ProductionOrderItem[orderItemIdx].ProductionOrderItemNumber
+		componentStockConfirmation.IsMarkedForDeletion = getBoolPtr(false)
+
+		componentStockConfirmations = append(componentStockConfirmations, componentStockConfirmation)
+	}
+
+	return componentStockConfirmations, nil
+}
+
+func ConvertToComponentCosting(
+	sdc *api_input_reader.SDC,
+	psdc *api_processing_data_formatter.SDC,
+) ([]*ItemComponentCosting, error) {
+	var err error
+
+	componentCostings := make([]*ItemComponentCosting, 0, len(psdc.ProductionOrderComponent))
+	for i := range psdc.ProductionOrderComponent {
+		inputComponentCosting := sdc.Header.Item[0].ItemComponent[0].ItemComponentCosting[0]
+
+		componentCosting := &ItemComponentCosting{}
+
+		// 入力ファイル
+		componentCosting, err = jsonTypeConversion(componentCosting, inputComponentCosting)
+		if err != nil {
+			return nil, err
+		}
+
+		plannedOrder := psdc.ProductionOrderComponent[i].PlannedOrder
+		plannedOrderItem := psdc.ProductionOrderComponent[i].PlannedOrderItem
+
+		orderItemIdx := -1
+		for j, v := range psdc.ProductionOrderItem {
+			if v.PlannedOrder == plannedOrder && v.PlannedOrderItem == plannedOrderItem {
+				orderItemIdx = j
+				break
+			}
+		}
+		if orderItemIdx == -1 {
+			continue
+		}
+
+		componentCosting.ProductionOrder = sdc.Header.ProductionOrder
+		componentCosting.ProductionOrderItem = psdc.ProductionOrderItem[orderItemIdx].ProductionOrderItemNumber
+		componentCosting.IsMarkedForDeletion = getBoolPtr(false)
+
+		componentCostings = append(componentCostings, componentCosting)
+	}
+
+	return componentCostings, nil
+}
+
+func ConvertToOperations(
+	sdc *api_input_reader.SDC,
+	psdc *api_processing_data_formatter.SDC,
+) ([]*ItemOperations, error) {
 	var err error
 
 	length := 0
-	for _, v := range sdc.Header.Item {
-		length += len(v.Component)
+	for _, item := range sdc.Header.Item {
+		length += len(item.ItemOperations)
+
 	}
 
-	components := make([]*Component, 0, length)
-	for _, item := range sdc.Header.Item {
-		inputComponent := item.Component[0]
-
-		for _, v := range item.Component {
-			component := &Component{}
-
-			_ = v
+	operations := make([]*ItemOperations, 0, length)
+	for i, item := range sdc.Header.Item {
+		for j := range item.ItemOperations {
+			operation := &ItemOperations{}
+			inputOperation := item.ItemOperations[j]
 
 			// 入力ファイル
-			component, err = jsonTypeConversion(component, inputComponent)
+			operation, err = jsonTypeConversion(operation, inputOperation)
 			if err != nil {
 				return nil, err
 			}
 
-			component.ProductionOrder = sdc.Header.ProductionOrder
-			// component.ProductionOrderItem = psdc.ProductionOrderItem[i].ProductionOrderItem
-			// component.ProductionOrderSequence =  //1-1-3
-			// component.ProductionOrderOperation =  //1-1-3
-			// component.OrderInternalBillOfOperations =  //1-1-3
-			// component.Reservation =  //1-1-3
-			// component.ReservationItem =  //1-1-3
-			// component.ComponentProduct =  //1-1-3
-			// component.ComponentProductRequirementDate =  //1-1-3
-			// component.ComponentProductRequirementTime =  //1-1-3
-			component.ComponentProductIsMarkedForBackflush = getBoolPtr(false)
-			// component.PlannedOrder =  //1-1-3
-			// component.OrderID =  //1-1-3
-			// component.OrderItem =  //1-1-3
-			// component.BillOfMaterial =  //1-1-3
-			// component.BOMItem =  //1-1-3
-			// component.BOMItemDescription =  //1-1-3
-			// component.Batch =  //2-3-2
-			component.ProductCompIsAlternativeItem = getBoolPtr(false)
-			component.CostingPolicy = getStringPtr("S")
-			// component.ComponentScrapInPercent =  //1-1-3
-			// component.OperationScrapInPercent =  //1-1-3
-			// component.BaseUnit =  //1-1-3
-			// component.RequiredQuantity =  //1-1-3
-			// component.WithdrawnQuantity =  //1-1-3
-			// component.ConfirmedAvailableQuantity =  //2-1
-			// component.ProductCompOriginalQuantity =  //1-1-3
-			component.IsMarkedForDeletion = getBoolPtr(false)
+			operation.ProductionOrder = sdc.Header.ProductionOrder
+			operation.ProductionOrderItem = psdc.ProductionOrderItem[i].ProductionOrderItemNumber
+			operation.OperationIsReleased = getBoolPtr(false)
+			operation.OperationIsPartiallyConfirmed = getBoolPtr(false)
+			operation.OperationIsConfirmed = getBoolPtr(false)
+			operation.OperationIsClosed = getBoolPtr(false)
+			operation.OperationIsMarkedForDeletion = getBoolPtr(false)
+			// operation.OperationUnit =  //2-3-3
 
-			components = append(components, component)
+			operations = append(operations, operation)
 		}
+
 	}
 
-	return components, nil
+	return operations, nil
 }
 
 func getBoolPtr(b bool) *bool {
@@ -120,6 +390,14 @@ func getBoolPtr(b bool) *bool {
 
 func getStringPtr(s string) *string {
 	return &s
+}
+
+func getValue[T any](ptr *T) T {
+	var zero T
+	if ptr == nil {
+		return zero
+	}
+	return *ptr
 }
 
 func jsonTypeConversion[T any](dist T, data interface{}) (T, error) {

@@ -13,9 +13,22 @@ func (f *SubFunction) ProductionOrderItem(
 	sdc *api_input_reader.SDC,
 	psdc *api_processing_data_formatter.SDC,
 ) []*api_processing_data_formatter.ProductionOrderItem {
-	data := psdc.ConvertToProductionOrderItem(sdc)
+	data := psdc.ConvertToProductionOrderItem()
 
 	return data
+}
+
+func (f *SubFunction) ExecuteProductAvailabilityCheck(
+	sdc *api_input_reader.SDC,
+	psdc *api_processing_data_formatter.SDC,
+) (*api_processing_data_formatter.ExecuteProductAvailabilityCheck, error) {
+	if sdc.InputParameters.ExecuteProductAvailabilityCheck == nil {
+		return nil, xerrors.New("入力パラメータのExecuteProductAvailabilityCheckがnullです。")
+	}
+
+	data := psdc.ConvertToExecuteProductAvailabilityCheck(sdc)
+
+	return data, nil
 }
 
 func (f *SubFunction) ProductMasterBPPlant(
@@ -112,6 +125,9 @@ func (f *SubFunction) StockConfirmation(
 	for _, component := range psdc.PlannedOrderComponent {
 		datumKey := psdc.ConvertToStockConfirmationKey()
 
+		datumKey.PlannedOrder = component.PlannedOrder
+		datumKey.PlannedOrderItem = component.PlannedOrderItem
+
 		if component.ComponentProduct == nil || component.StockConfirmationBusinessPartner == nil || component.StockConfirmationPlant == nil {
 			continue
 		}
@@ -201,7 +217,7 @@ func (f *SubFunction) StockConfirmation(
 		}
 		res.Success()
 
-		datum, err := psdc.ConvertToStockConfirmation(res.Data(), v.StockConfirmationIsOrdinary, v.StockConfirmationIsLotUnit)
+		datum, err := psdc.ConvertToStockConfirmation(res.Data(), v.PlannedOrder, v.PlannedOrderItem, v.StockConfirmationIsOrdinary, v.StockConfirmationIsLotUnit)
 		if err != nil {
 			return nil, err
 		}
@@ -210,6 +226,41 @@ func (f *SubFunction) StockConfirmation(
 	}
 
 	return data, err
+}
+
+func (f *SubFunction) ItemIsPartiallyConfirmed(
+	sdc *api_input_reader.SDC,
+	psdc *api_processing_data_formatter.SDC,
+) []*api_processing_data_formatter.ItemIsPartiallyConfirmed {
+	data := make([]*api_processing_data_formatter.ItemIsPartiallyConfirmed, 0)
+
+	for _, stockConfirmation := range psdc.StockConfirmation {
+		stockIsFullyChecked := stockConfirmation.StockIsFullyChecked
+		openConfirmedQuantityInBaseUnit := stockConfirmation.OpenConfirmedQuantityInBaseUnit
+		itemIsPartiallyConfirmed := (!stockIsFullyChecked && openConfirmedQuantityInBaseUnit != 0)
+
+		datum := psdc.ConvertToItemIsPartiallyConfirmed(stockConfirmation, itemIsPartiallyConfirmed)
+		data = append(data, datum)
+	}
+
+	return data
+}
+
+func (f *SubFunction) ItemIsConfirmed(
+	sdc *api_input_reader.SDC,
+	psdc *api_processing_data_formatter.SDC,
+) []*api_processing_data_formatter.ItemIsConfirmed {
+	data := make([]*api_processing_data_formatter.ItemIsConfirmed, 0)
+
+	for _, stockConfirmation := range psdc.StockConfirmation {
+		stockIsFullyChecked := stockConfirmation.StockIsFullyChecked
+		itemIsConfirmed := stockIsFullyChecked
+
+		datum := psdc.ConvertToItemIsConfirmed(stockConfirmation, itemIsConfirmed)
+		data = append(data, datum)
+	}
+
+	return data
 }
 
 func (f *SubFunction) ProductAvailabilityIsNotChecked(
@@ -227,34 +278,30 @@ func (f *SubFunction) ProductAvailabilityIsNotChecked(
 	return data
 }
 
-func (f *SubFunction) InternalBillOfOperations(
-	sdc *api_input_reader.SDC,
-	psdc *api_processing_data_formatter.SDC,
-) []*api_processing_data_formatter.InternalBillOfOperations {
-	data := make([]*api_processing_data_formatter.InternalBillOfOperations, 0)
-
-	for _, component := range psdc.PlannedOrderComponent {
-		plannedOrder := component.PlannedOrder
-		plannedOrderItem := component.PlannedOrderItem
-		internalBillOfOperations := component.OrderInternalBillOfOperations
-		datum := psdc.ConvertToInternalBillOfOperations(plannedOrder, plannedOrderItem, internalBillOfOperations)
-
-		data = append(data, datum)
-	}
-
-	return data
-}
-
 func (f *SubFunction) TotalQuantity(
 	sdc *api_input_reader.SDC,
 	psdc *api_processing_data_formatter.SDC,
 ) []*api_processing_data_formatter.TotalQuantity {
 	data := make([]*api_processing_data_formatter.TotalQuantity, 0)
 
-	for _, stockConfirmation := range psdc.StockConfirmation {
-		datum := psdc.ConvertToTotalQuantity(stockConfirmation)
+	if len(psdc.StockConfirmation) != 0 {
+		for i, stockConfirmation := range psdc.StockConfirmation {
+			plannedOrder := stockConfirmation.PlannedOrder
+			plannedOrderItem := stockConfirmation.PlannedOrderItem
+			openConfirmedQuantityInBaseUnit := &psdc.StockConfirmation[i].OpenConfirmedQuantityInBaseUnit
+			datum := psdc.ConvertToTotalQuantity(plannedOrder, plannedOrderItem, openConfirmedQuantityInBaseUnit)
 
-		data = append(data, datum)
+			data = append(data, datum)
+		}
+	} else {
+		for _, item := range psdc.PlannedOrderItem {
+			plannedOrder := item.PlannedOrder
+			plannedOrderItem := item.PlannedOrderItem
+			plannedOrderIssuingQuantity := item.PlannedOrderIssuingQuantity
+			datum := psdc.ConvertToTotalQuantity(plannedOrder, plannedOrderItem, plannedOrderIssuingQuantity)
+
+			data = append(data, datum)
+		}
 	}
 
 	return data
@@ -279,30 +326,21 @@ func (f *SubFunction) PlannedScrapQuantityItem(
 			continue
 		}
 
-		businessPartner := *component.ComponentProductDeliverFromParty
-		product := *component.ComponentProduct
-		plant := *component.StockConfirmationPlant
-		batch := *component.StockConfirmationPlantBatch
-		productStockAvailabilityDate := *component.ComponentProductRequirementDate
-
-		totalQuantityValue := float32(0)
-		for _, totalQuantity := range psdc.TotalQuantity {
-			if len(totalQuantity.Batch) == 0 {
-				if totalQuantity.BusinessPartner == businessPartner && totalQuantity.Product == product && totalQuantity.Plant == plant && totalQuantity.ProductStockAvailabilityDate == productStockAvailabilityDate {
-					totalQuantityValue = totalQuantity.TotalQuantity
-					break
-				}
-			} else {
-				if totalQuantity.BusinessPartner == businessPartner && totalQuantity.Product == product && totalQuantity.Plant == plant && totalQuantity.Batch == batch && totalQuantity.ProductStockAvailabilityDate == productStockAvailabilityDate {
-					totalQuantityValue = totalQuantity.TotalQuantity
-					break
-				}
+		totalQuantity := new(float32)
+		for _, quantity := range psdc.TotalQuantity {
+			if quantity.PlannedOrder == plannedOrder && quantity.PlannedOrderItem == plannedOrderItem {
+				totalQuantity = quantity.TotalQuantity
+				break
 			}
 		}
 
-		plannedScrapQuantity := componentScrapInPercent * totalQuantityValue / 100
+		var plannedScrapQuantity *float32
+		plannedScrapQuantity = nil
+		if totalQuantity != nil {
+			plannedScrapQuantity = getFloat32Ptr(componentScrapInPercent * *totalQuantity / 100)
+		}
 
-		datum := psdc.ConvertToPlannedScrapQuantityItem(plannedOrder, plannedOrderItem, componentScrapInPercent, totalQuantityValue, plannedScrapQuantity)
+		datum := psdc.ConvertToPlannedScrapQuantityItem(plannedOrder, plannedOrderItem, componentScrapInPercent, totalQuantity, plannedScrapQuantity)
 
 		data = append(data, datum)
 	}
@@ -344,4 +382,8 @@ func (f *SubFunction) LastChangeDateItem(
 
 func getBoolPtr(b bool) *bool {
 	return &b
+}
+
+func getFloat32Ptr(f float32) *float32 {
+	return &f
 }

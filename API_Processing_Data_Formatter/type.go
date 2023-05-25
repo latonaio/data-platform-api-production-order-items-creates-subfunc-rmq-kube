@@ -3,17 +3,24 @@ package api_processing_data_formatter
 type SDC struct {
 	MetaData                        *MetaData                        `json:"MetaData"`
 	ProcessType                     *ProcessType                     `json:"ProcessType"`
-	PlannedOrderHeder               []*PlannedOrderHeder             `json:"PlannedOrderHeder"`
+	PlannedOrderHeader              []*PlannedOrderHeader            `json:"PlannedOrderHeader"`
 	PlannedOrderItem                []*PlannedOrderItem              `json:"PlannedOrderItem"`
 	PlannedOrderComponent           []*PlannedOrderComponent         `json:"PlannedOrderComponent"`
 	ProductionOrderItem             []*ProductionOrderItem           `json:"ProductionOrderItem"`
+	ExecuteProductAvailabilityCheck *ExecuteProductAvailabilityCheck `json:"ExecuteProductAvailabilityCheck"`
 	ProductMasterBPPlant            []*ProductMasterBPPlant          `json:"ProductMasterBPPlant"`
 	BatchMasterRecordBatch          []*BatchMasterRecordBatch        `json:"BatchMasterRecordBatch"`
 	StockConfirmation               []*StockConfirmation             `json:"StockConfirmation"`
+	ItemIsPartiallyConfirmed        []*ItemIsPartiallyConfirmed      `json:"ItemIsPartiallyConfirmed"`
+	ItemIsConfirmed                 []*ItemIsConfirmed               `json:"ItemIsConfirmed"`
 	ProductAvailabilityIsNotChecked *ProductAvailabilityIsNotChecked `json:"ProductAvailabilityIsNotChecked"`
 	InternalBillOfOperations        []*InternalBillOfOperations      `json:"InternalBillOfOperations"`
 	TotalQuantity                   []*TotalQuantity                 `json:"TotalQuantity"`
 	PlannedScrapQuantityItem        []*PlannedScrapQuantityItem      `json:"PlannedScrapQuantityItem"`
+	ProductionOrderComponent        []*ProductionOrderComponent      `json:"ProductionOrderComponent"`
+	ProductionRoutingHeader         []*ProductionRoutingHeader       `json:"ProductionRoutingHeader"`
+	ProductionRoutingProductPlant   []*ProductionRoutingProductPlant `json:"ProductionRoutingProductPlant"`
+	ProductionRoutingOperation      []*ProductionRoutingOperation    `json:"ProductionRoutingOperation"`
 	CreationDateItem                *CreationDate                    `json:"CreationDateItem"`
 	LastChangeDateItem              *LastChangeDate                  `json:"LastChangeDateItem"`
 }
@@ -31,7 +38,7 @@ type ProcessType struct {
 }
 
 // Header
-type PlannedOrderHederKey struct {
+type PlannedOrderHeaderKey struct {
 	MRPArea                                 []*string `json:"MRPArea"`
 	MRPAreaTo                               *string   `json:"MRPAreaTo"`
 	MRPAreaFrom                             *string   `json:"MRPAreaFrom"`
@@ -49,20 +56,19 @@ type PlannedOrderHederKey struct {
 	IsMarkedForDeletion                     bool      `json:"IsMarkedForDeletion"`
 }
 
-type PlannedOrderHeder struct {
-	PlannedOrder                             int     `json:"PlannedOrder"`
-	PlannedOrderType                         *string `json:"PlannedOrderType"`
-	Product                                  *string `json:"Product"`
-	ProductDeliverFromParty                  *int    `json:"ProductDeliverFromParty"`
-	ProductDeliverToParty                    *int    `json:"ProductDeliverToParty"`
-	OriginIssuingPlant                       *string `json:"OriginIssuingPlant"`
-	OriginIssuingPlantStorageLocation        *string `json:"OriginIssuingPlantStorageLocation"`
-	DestinationReceivingPlant                *string `json:"DestinationReceivingPlant"`
-	DestinationReceivingPlantStorageLocation *string `json:"DestinationReceivingPlantStorageLocation"`
-	OwnerProductionPlantBusinessPartner      *int    `json:"OwnerProductionPlantBusinessPartner"`
-	OwnerProductionPlant                     *string `json:"OwnerProductionPlant"`
-	OwnerProductionPlantStorageLocation      *string `json:"OwnerProductionPlantStorageLocation"`
-	// BaseUnit                                 *string  `json:"BaseUnit"`
+type PlannedOrderHeader struct {
+	PlannedOrder                             int      `json:"PlannedOrder"`
+	PlannedOrderType                         *string  `json:"PlannedOrderType"`
+	Product                                  *string  `json:"Product"`
+	ProductDeliverFromParty                  *int     `json:"ProductDeliverFromParty"`
+	ProductDeliverToParty                    *int     `json:"ProductDeliverToParty"`
+	OriginIssuingPlant                       *string  `json:"OriginIssuingPlant"`
+	OriginIssuingPlantStorageLocation        *string  `json:"OriginIssuingPlantStorageLocation"`
+	DestinationReceivingPlant                *string  `json:"DestinationReceivingPlant"`
+	DestinationReceivingPlantStorageLocation *string  `json:"DestinationReceivingPlantStorageLocation"`
+	OwnerProductionPlantBusinessPartner      *int     `json:"OwnerProductionPlantBusinessPartner"`
+	OwnerProductionPlant                     *string  `json:"OwnerProductionPlant"`
+	OwnerProductionPlantStorageLocation      *string  `json:"OwnerProductionPlantStorageLocation"`
 	MRPArea                                  *string  `json:"MRPArea"`
 	MRPController                            *string  `json:"MRPController"`
 	PlannedOrderQuantityInBaseUnit           *float32 `json:"PlannedOrderQuantityInBaseUnit"`
@@ -173,15 +179,10 @@ type PlannedOrderComponentKey struct {
 type PlannedOrderComponent struct {
 	PlannedOrder                     int      `json:"PlannedOrder"`
 	PlannedOrderItem                 int      `json:"PlannedOrderItem"`
-	PlannedOrderSequence             *string  `json:"PlannedOrderSequence"`
-	PlannedOrderOperation            *string  `json:"PlannedOrderOperation"`
-	OrderInternalBillOfOperations    *string  `json:"OrderInternalBillOfOperations"`
 	BillOfMaterial                   *int     `json:"BillOfMaterial"`
 	BOMItem                          *int     `json:"BOMItem"`
-	BOMItemDescription               *string  `json:"BOMItemDescription"`
-	BillOfMaterialCategory           *string  `json:"BillOfMaterialCategory"`
-	BillOfMaterialItemNumber         *int     `json:"BillOfMaterialItemNumber"`
-	BillOfMaterialInternalID         *int     `json:"BillOfMaterialInternalID"`
+	Operations                       *int     `json:"Operations"`
+	OperationsItem                   *int     `json:"OperationsItem"`
 	Reservation                      *int     `json:"Reservation"`
 	ReservationItem                  *int     `json:"ReservationItem"`
 	ComponentProduct                 *string  `json:"ComponentProduct"`
@@ -192,6 +193,7 @@ type PlannedOrderComponent struct {
 	ComponentProductRequirementDate  *string  `json:"ComponentProductRequirementDate"`
 	ComponentProductRequirementTime  *string  `json:"ComponentProductRequirementTime"`
 	ComponentProductRequiredQuantity *float32 `json:"ComponentProductRequiredQuantity"`
+	ComponentProductBusinessPartner  *int     `json:"ComponentProductBusinessPartner"`
 	BaseUnit                         *string  `json:"BaseUnit"`
 	MRPArea                          *string  `json:"MRPArea"`
 	MRPController                    *string  `json:"MRPController"`
@@ -210,7 +212,13 @@ type PlannedOrderComponent struct {
 
 // Item
 type ProductionOrderItem struct {
+	PlannedOrder              int `json:"PlannedOrder"`
+	PlannedOrderItem          int `json:"PlannedOrderItem"`
 	ProductionOrderItemNumber int `json:"ProductionOrderItemNumber"`
+}
+
+type ExecuteProductAvailabilityCheck struct {
+	ExecuteProductAvailabilityCheck bool `json:"ExecuteProductAvailabilityCheck"`
 }
 
 type ProductMasterBPPlantKey struct {
@@ -228,6 +236,8 @@ type ProductMasterBPPlant struct {
 }
 
 type StockConfirmationKey struct {
+	PlannedOrder                                 int     `json:"PlannedOrder"`
+	PlannedOrderItem                             int     `json:"PlannedOrderItem"`
 	Product                                      string  `json:"Product"`
 	StockConfirmationBusinessPartner             int     `json:"StockConfirmationBusinessPartner"`
 	StockConfirmationPlant                       string  `json:"StockConfirmationPlant"`
@@ -241,6 +251,8 @@ type StockConfirmationKey struct {
 }
 
 type StockConfirmation struct {
+	PlannedOrder                    int     `json:"PlannedOrder"`
+	PlannedOrderItem                int     `json:"PlannedOrderItem"`
 	BusinessPartner                 int     `json:"BusinessPartner"`
 	Product                         string  `json:"Product"`
 	Plant                           string  `json:"Plant"`
@@ -272,15 +284,14 @@ type ProductAvailabilityCheck struct {
 	BusinessPartnerID             *int   `json:"business_partner"`
 	ServiceLabel                  string `json:"service_label"`
 	ProductStockAvailabilityCheck struct {
-		BusinessPartner                 *int     `json:"BusinessPartner"`
 		Product                         *string  `json:"Product"`
+		BusinessPartner                 *int     `json:"BusinessPartner"`
 		Plant                           *string  `json:"Plant"`
+		StorageLocation                 *string  `json:"StorageLocation"`
+		StorageBin                      *string  `json:"StorageBin"`
 		Batch                           *string  `json:"Batch"`
 		RequestedQuantity               *float32 `json:"RequestedQuantity"`
 		ProductStockAvailabilityDate    *string  `json:"ProductStockAvailabilityDate"`
-		OrderID                         *int     `json:"OrderID"`
-		OrderItem                       *int     `json:"OrderItem"`
-		Project                         *string  `json:"Project"`
 		InventoryStockType              *string  `json:"InventoryStockType"`
 		InventorySpecialStockType       *string  `json:"InventorySpecialStockType"`
 		AvailableProductStock           *float32 `json:"AvailableProductStock"`
@@ -315,31 +326,161 @@ type BatchMasterRecordBatch struct {
 	IsMarkedForDeletion *bool  `json:"IsMarkedForDeletion"`
 }
 
+type ItemIsPartiallyConfirmed struct {
+	PlannedOrder                    int     `json:"PlannedOrder"`
+	PlannedOrderItem                int     `json:"PlannedOrderItem"`
+	StockIsFullyChecked             bool    `json:"StockIsFullyChecked"`
+	OpenConfirmedQuantityInBaseUnit float32 `json:"OpenConfirmedQuantityInBaseUnit"`
+	ItemIsPartiallyConfirmed        bool    `json:"ItemIsPartiallyConfirmed"`
+}
+
+type ItemIsConfirmed struct {
+	PlannedOrder        int  `json:"PlannedOrder"`
+	PlannedOrderItem    int  `json:"PlannedOrderItem"`
+	StockIsFullyChecked bool `json:"StockIsFullyChecked"`
+	ItemIsConfirmed     bool `json:"ItemIsConfirmed"`
+}
+
 type ProductAvailabilityIsNotChecked struct {
 	ProductAvailabilityIsNotChecked *bool `json:"ProductAvailabilityIsNotChecked"`
 }
 
 type InternalBillOfOperations struct {
-	PlannedOrder             int     `json:"PlannedOrder"`
-	PlannedOrderItem         int     `json:"PlannedOrderItem"`
-	InternalBillOfOperations *string `json:"InternalBillOfOperations"`
+	PlannedOrder             int  `json:"PlannedOrder"`
+	PlannedOrderItem         int  `json:"PlannedOrderItem"`
+	InternalBillOfOperations *int `json:"InternalBillOfOperations"`
 }
 
 type TotalQuantity struct {
-	BusinessPartner              int     `json:"BusinessPartner"`
-	Product                      string  `json:"Product"`
-	Plant                        string  `json:"Plant"`
-	Batch                        string  `json:"Batch"`
-	ProductStockAvailabilityDate string  `json:"ProductStockAvailabilityDate"`
-	TotalQuantity                float32 `json:"TotalQuantity"`
+	PlannedOrder     int      `json:"PlannedOrder"`
+	PlannedOrderItem int      `json:"PlannedOrderItem"`
+	TotalQuantity    *float32 `json:"TotalQuantity"`
 }
 
 type PlannedScrapQuantityItem struct {
-	PlannedOrder            int     `json:"PlannedOrder"`
-	PlannedOrderItem        int     `json:"PlannedOrderItem"`
-	ComponentScrapInPercent float32 `json:"ComponentScrapInPercent"`
-	TotalQuantity           float32 `json:"TotalQuantity"`
-	PlannedScrapQuantity    float32 `json:"PlannedScrapQuantity"`
+	PlannedOrder            int      `json:"PlannedOrder"`
+	PlannedOrderItem        int      `json:"PlannedOrderItem"`
+	ComponentScrapInPercent float32  `json:"ComponentScrapInPercent"`
+	TotalQuantity           *float32 `json:"TotalQuantity"`
+	PlannedScrapQuantity    *float32 `json:"PlannedScrapQuantity"`
+}
+
+// Component
+type ProductionOrderComponent struct {
+	PlannedOrder     int `json:"PlannedOrder"`
+	PlannedOrderItem int `json:"PlannedOrderItem"`
+	Operations       int `json:"Operations"`
+	OperationsItem   int `json:"OperationsItem"`
+	BillOfMaterial   int `json:"BillOfMaterial"`
+	BOMItem          int `json:"BOMItem"`
+}
+
+// Operation
+type ProductionRoutingHeaderKey struct {
+	ProductionPlantBusinessPartner     []*int    `json:"ProductionPlantBusinessPartner"`
+	ProductionPlantBusinessPartnerTo   *int      `json:"ProductionPlantBusinessPartnerTo"`
+	ProductionPlantBusinessPartnerFrom *int      `json:"ProductionPlantBusinessPartnerFrom"`
+	ProductionPlant                    []*string `json:"ProductionPlant"`
+	ProductionPlantTo                  *string   `json:"ProductionPlantTo"`
+	ProductionPlantFrom                *string   `json:"ProductionPlantFrom"`
+	IsMarkedForDeletion                bool      `json:"IsMarkedForDeletion"`
+}
+
+type ProductionRoutingHeader struct {
+	BusinessPartner               int     `json:"BusinessPartner"`
+	ProductionRoutingGroup        string  `json:"ProductionRoutingGroup"`
+	ProductionRouting             string  `json:"ProductionRouting"`
+	ProductionRoutingInternalVers string  `json:"ProductionRoutingInternalVers"`
+	IsMarkedForDeletion           *bool   `json:"IsMarkedForDeletion"`
+	BillOfOperationsDesc          *string `json:"BillOfOperationsDesc"`
+	Plant                         *string `json:"Plant"`
+	BillOfOperationsUsage         *string `json:"BillOfOperationsUsage"`
+	BillOfOperationsStatus        *string `json:"BillOfOperationsStatus"`
+	ResponsiblePlannerGroup       *string `json:"ResponsiblePlannerGroup"`
+	MinimumLotSizeQuantity        *string `json:"MinimumLotSizeQuantity"`
+	MaximumLotSizeQuantity        *string `json:"MaximumLotSizeQuantity"`
+	BillOfOperationsUnit          *string `json:"BillOfOperationsUnit"`
+	CreationDate                  *string `json:"CreationDate"`
+	LastChangeDate                *string `json:"LastChangeDate"`
+	ValidityStartDate             *string `json:"ValidityStartDate"`
+	ValidityEndDate               *string `json:"ValidityEndDate"`
+	ChangeNumber                  *string `json:"ChangeNumber"`
+	PlainLongText                 *string `json:"PlainLongText"`
+	MaterialAssignment            *string `json:"MaterialAssignment"`
+}
+
+type ProductionRoutingProductPlantKey struct {
+	ProductInHeader        []*string `json:"ProductInHeader"`
+	ProductInHeaderTo      *string   `json:"ProductInHeaderTo"`
+	ProductInHeaderFrom    *string   `json:"ProductInHeaderFrom"`
+	BusinessPartner        []int     `json:"BusinessPartner"`
+	Plant                  []string  `json:"Plant"`
+	ProductionRoutingGroup []string  `json:"ProductionRoutingGroup"`
+	ProductionRouting      []string  `json:"ProductionRouting"`
+	IsMarkedForDeletion    bool      `json:"IsMarkedForDeletion"`
+}
+
+type ProductionRoutingProductPlant struct {
+	BusinessPartner                int     `json:"BusinessPartner"`
+	Product                        string  `json:"Product"`
+	Plant                          string  `json:"Plant"`
+	ProductionRoutingGroup         string  `json:"ProductionRoutingGroup"`
+	ProductionRouting              string  `json:"ProductionRouting"`
+	ProductionRoutingMatlAssgmt    string  `json:"ProductionRoutingMatlAssgmt"`
+	ProductionRtgMatlAssgmtIntVers string  `json:"ProductionRtgMatlAssgmtIntVers"`
+	CreationDate                   *string `json:"CreationDate"`
+	LastChangeDate                 *string `json:"LastChangeDate"`
+	ValidityStartDate              *string `json:"ValidityStartDate"`
+	ValidityEndDate                *string `json:"ValidityEndDate"`
+	ChangeNumber                   *string `json:"ChangeNumber"`
+}
+
+type ProductionRoutingOperationKey struct {
+	ProductionRoutingGroup []string `json:"ProductionRoutingGroup"`
+	ProductionRouting      []string `json:"ProductionRouting"`
+	Plant                  []string `json:"Plant"`
+}
+
+type ProductionRoutingOperation struct {
+	ProductionRoutingGroup        string  `json:"ProductionRoutingGroup"`
+	ProductionRouting             string  `json:"ProductionRouting"`
+	ProductionRoutingSequence     string  `json:"ProductionRoutingSequence"`
+	ProductionRoutingOpIntID      string  `json:"ProductionRoutingOpIntID"`
+	ProductionRoutingOpIntVersion string  `json:"ProductionRoutingOpIntVersion"`
+	Operation                     *string `json:"Operation"`
+	CreationDate                  *string `json:"CreationDate"`
+	ChangeNumber                  *string `json:"ChangeNumber"`
+	ValidityStartDate             *string `json:"ValidityStartDate"`
+	ValidityEndDate               *string `json:"ValidityEndDate"`
+	WorkCenterTypeCode            *string `json:"WorkCenterTypeCode"`
+	WorkCenterInternalID          *string `json:"WorkCenterInternalID"`
+	OperationSetupType            *string `json:"OperationSetupType"`
+	OperationSetupGroupCategory   *string `json:"OperationSetupGroupCategory"`
+	OperationSetupGroup           *string `json:"OperationSetupGroup"`
+	OperationReferenceQuantity    *string `json:"OperationReferenceQuantity"`
+	OperationUnit                 *string `json:"OperationUnit"`
+	OpQtyToBaseQtyNmrtr           *string `json:"OpQtyToBaseQtyNmrtr"`
+	OpQtyToBaseQtyDnmntr          *string `json:"OpQtyToBaseQtyDnmntr"`
+	MaximumWaitDuration           *string `json:"MaximumWaitDuration"`
+	MaximumWaitDurationUnit       *string `json:"MaximumWaitDurationUnit"`
+	MinimumWaitDuration           *string `json:"MinimumWaitDuration"`
+	MinimumWaitDurationUnit       *string `json:"MinimumWaitDurationUnit"`
+	StandardQueueDuration         *string `json:"StandardQueueDuration"`
+	StandardQueueDurationUnit     *string `json:"StandardQueueDurationUnit"`
+	MinimumQueueDuration          *string `json:"MinimumQueueDuration"`
+	MinimumQueueDurationUnit      *string `json:"MinimumQueueDurationUnit"`
+	StandardMoveDuration          *string `json:"StandardMoveDuration"`
+	StandardMoveDurationUnit      *string `json:"StandardMoveDurationUnit"`
+	MinimumMoveDuration           *string `json:"MinimumMoveDuration"`
+	MinimumMoveDurationUnit       *string `json:"MinimumMoveDurationUnit"`
+	OpIsExtlyProcdWithSubcontrg   *bool   `json:"OpIsExtlyProcdWithSubcontrg"`
+	PlannedDeliveryDuration       *int    `json:"PlannedDeliveryDuration"`
+	MaterialGroup                 *string `json:"MaterialGroup"`
+	PurchasingGroup               *string `json:"PurchasingGroup"`
+	NumberOfOperationPriceUnits   *string `json:"NumberOfOperationPriceUnits"`
+	CostElement                   *string `json:"CostElement"`
+	OpExternalProcessingPrice     *string `json:"OpExternalProcessingPrice"`
+	OpExternalProcessingCurrency  *string `json:"OpExternalProcessingCurrency"`
 }
 
 // 日付等の処理

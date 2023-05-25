@@ -10,17 +10,17 @@
   "message": {
     "Item": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000003,
         "ProductionOrderItem": 1,
         "CreationDate": "2023-04-17",
         "LastChangeDate": "2023-04-17",
         "ItemIsReleased": true,
-        "ItemIsPartiallyConfirmed": true,
-        "ItemIsConfirmed": false,
+        "ItemIsPartiallyConfirmed": null,
+        "ItemIsConfirmed": null,
         "ItemIsLocked": false,
         "ItemIsMarkedForDeletion": false,
         "ProductionOrderHasGeneratedOperations": true,
-        "ProductAvailabilityIsNotChecked": true,
+        "ProductAvailabilityIsNotChecked": false,
         "PrecedingItem": null,
         "FollowingItem": null,
         "Product": "A3750",
@@ -50,15 +50,15 @@
         "ProductionOrderActualEndDate": "",
         "ProductionOrderActualEndTime": "",
         "ProductionUnit": "PC",
-        "TotalQuantity": -10,
-        "PlannedScrapQuantity": -1.1764705,
-        "ConfirmedYieldQuantity": -10,
+        "TotalQuantity": 20,
+        "PlannedScrapQuantity": 2.352941,
+        "ConfirmedYieldQuantity": 20,
         "ProductionOrderItemText": ""
       }
     ],
     "ItemComponent": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000003,
         "ProductionOrderItem": 1,
         "Operations": 0,
         "OperationsItem": 0,
@@ -78,7 +78,7 @@
         "SortField": "",
         "BOMItemDescription": "",
         "StorageLocation": "",
-        "Batch": "",
+        "Batch": null,
         "GoodsRecipientName": "",
         "UnloadingPointName": "",
         "ProductCompIsAlternativeItem": false,
@@ -91,14 +91,14 @@
         "BaseUnit": "PC",
         "RequiredQuantity": 17,
         "WithdrawnQuantity": 2,
-        "ConfirmedAvailableQuantity": -10,
+        "ConfirmedAvailableQuantity": null,
         "ProductCompOriginalQuantity": 17,
         "IsMarkedForDeletion": false
       }
     ],
     "ItemComponentStockConfirmation": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000003,
         "ProductionOrderItem": 1,
         "Operations": 0,
         "OperationsItem": 0,
@@ -112,7 +112,7 @@
     ],
     "ItemComponentCosting": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000003,
         "ProductionOrderItem": 1,
         "Operations": 0,
         "OperationsItem": 0,
@@ -126,7 +126,7 @@
     ],
     "ItemOperations": [
       {
-        "ProductionOrder": 240000002,
+        "ProductionOrder": 240000003,
         "ProductionOrderItem": 1,
         "Operations": 0,
         "OperationsItem": 0,
